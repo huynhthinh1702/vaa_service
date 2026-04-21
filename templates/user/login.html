@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Đăng nhập</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f5fc;
+            color: #1f2a4d;
+        }
+        .top-header {
+            background: #172f91;
+            color: #fff;
+            padding: 14px 26px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+        .top-nav a {
+            color: #fff;
+            margin-left: 18px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .auth-page {
+            min-height: calc(100vh - 56px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 760px;
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 45px rgba(25, 52, 134, 0.16);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+        .auth-visual {
+            background: linear-gradient(135deg, #1a3193 0%, #2c53c7 100%);
+            color: #fff;
+            padding: 36px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .auth-visual h2 {
+            margin: 0 0 10px;
+            font-size: 34px;
+        }
+        .auth-visual p {
+            margin: 0;
+            line-height: 1.6;
+            opacity: 0.96;
+        }
+        .auth-form {
+            padding: 34px 30px;
+        }
+        .auth-form h1 {
+            margin: 0;
+            color: #1a2f8f;
+            font-size: 32px;
+            text-align: center;
+        }
+        .auth-form .subtitle {
+            margin: 6px 0 18px;
+            text-align: center;
+            color: #5d6990;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .field {
+            width: 100%;
+            border: 1px solid #d2daf2;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 15px;
+        }
+        .password-box {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 11px;
+            border: none;
+            background: transparent;
+            color: #4a5d9a;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+        }
+        .row-line {
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+        .remember-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .remember-wrap input {
+            width: 16px;
+            height: 16px;
+        }
+        .forgot {
+            color: #1f43b5;
+            text-decoration: none;
+        }
+        .submit-btn {
+            width: 100%;
+            margin-top: 14px;
+            border: none;
+            border-radius: 999px;
+            padding: 12px;
+            color: #fff;
+            font-weight: 700;
+            background: linear-gradient(90deg, #172f91, #2f57d1);
+            cursor: pointer;
+        }
+        .switch-auth {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 14px;
+            color: #58678f;
+        }
+        .switch-auth a {
+            color: #1f43b5;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .popup {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            color: white;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+        @media (max-width: 840px) {
+            .auth-card { grid-template-columns: 1fr; }
+            .auth-visual { display: none; }
+        }
+    </style>
+</head>
+
+<body>
+<header class="top-header">
+    <div class="logo">VAA</div>
+    <nav class="top-nav">
+        <a href="/user">Trang chủ</a>
+        <a href="/register">Đăng ký</a>
+    </nav>
+</header>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-visual">
+            <h2>Chào mừng trở lại</h2>
+            <p>Đăng nhập để tiếp tục đặt dịch vụ tại sân bay nhanh chóng và thuận tiện hơn.</p>
+        </div>
+        <div class="auth-form">
+            <h1>Đăng nhập</h1>
+            <p class="subtitle">Vui lòng đăng nhập để tiếp tục</p>
+
+            <div class="form-group">
+                <label for="user">Tên đăng nhập *</label>
+                <input id="user" class="field" placeholder="Nhập tên đăng nhập">
+            </div>
+
+            <div class="form-group">
+                <label for="pass">Mật khẩu *</label>
+                <div class="password-box">
+                    <input id="pass" class="field" type="password" placeholder="Nhập mật khẩu">
+                    <button type="button" class="password-toggle" onclick="togglePass()">👁</button>
+                </div>
+            </div>
+
+            <div class="row-line">
+                <label class="remember-wrap">
+                    <input type="checkbox" id="remember" checked>
+                    <span>Duy trì đăng nhập</span>
+                </label>
+                <a href="#" class="forgot">Quên mật khẩu?</a>
+            </div>
+
+            <button class="submit-btn" onclick="login()">Đăng nhập</button>
+
+            <p class="switch-auth">
+                Chưa có tài khoản? <a href="/register">Đăng ký ngay</a>
+            </p>
+
+            <div id="popup" class="popup"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePass() {
+    const pass = document.getElementById("pass");
+    pass.type = pass.type === "password" ? "text" : "password";
+}
+
+function showPopup(msg, color="#e74c3c") {
+    const p = document.getElementById("popup");
+    p.innerText = msg;
+    p.style.background = color;
+    p.style.display = "block";
+
+    setTimeout(() => {
+        p.style.display = "none";
+    }, 2000);
+}
+
+function login() {
+    const user = document.getElementById("user").value.trim();
+    const pass = document.getElementById("pass").value;
+    const remember = document.getElementById("remember").checked;
+
+    if (!user || !pass) {
+        showPopup("Không được để trống!");
+        return;
+    }
+
+    localStorage.setItem("remember_login", remember ? "1" : "0");
+
+    fetch("/auth/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: user,
+            password: pass,
+            remember_me: remember
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if (data.message === "Login success") {
+            showPopup("Đăng nhập thành công!", "#2ecc71");
+
+            setTimeout(() => {
+                fetch("/auth/me")
+                .then(res => res.json())
+                .then(user => {
+                    window.location.href = user.role === "admin" ? "/admin" : "/user";
+                });
+            }, 1000);
+
+        } else {
+            showPopup("Sai tài khoản!");
+        }
+    })
+    .catch(() => showPopup("Không thể kết nối máy chủ!"));
+}
+</script>
+</body>
+</html>

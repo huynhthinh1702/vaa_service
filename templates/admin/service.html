@@ -1,0 +1,207 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Thêm dịch vụ</h2>
+
+    <input id="search" placeholder="Tìm dịch vụ..." onkeyup="searchService()">
+    <input id="name" placeholder="Tên dịch vụ">
+    <input id="category" placeholder="Loại">
+    <input id="price" placeholder="Giá">
+    <input id="image" placeholder="Link ảnh">
+    <input id="open_time" placeholder="Giờ mở cửa (vd: 06:00-23:00)">
+    <input id="phone" placeholder="Số điện thoại">
+    <input id="description" placeholder="Mô tả chi tiết">
+    <input id="location" placeholder="Địa điểm">
+    <input id="position" placeholder="Vị trí">
+    <input id="usage_hours" placeholder="Số giờ sử dụng (VD: Tối đa 4 giờ)">
+    <input id="amenities" placeholder="Tiện ích (ngăn cách bằng dấu phẩy)">
+
+    <button onclick="addService()">Thêm</button>
+</div>
+
+<div class="card">
+    <h2>Danh sách dịch vụ</h2>
+
+    <button onclick="loadServices()">Load</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên</th>
+                <th>Loại</th>
+                <th>Giá</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+</div>
+
+<script>
+
+const API = "http://127.0.0.1:5000";
+
+let currentId = null;
+
+function addService() {
+
+    const name = document.getElementById("name").value;
+    const price = document.getElementById("price").value;
+    const category = document.getElementById("category").value;
+
+    if (!name || !price || !category) {
+        alert("Vui lòng nhập đầy đủ!");
+        return;
+    }
+
+    if (isNaN(price) || price <= 0) {
+        alert("Giá không hợp lệ!");
+        return;
+    }
+
+
+    if (currentId) {
+        fetch(API + "/service/update/" + currentId, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                name: document.getElementById("name").value,
+                price: document.getElementById("price").value,
+                category: document.getElementById("category").value,
+                image: document.getElementById("image").value,
+                open_time: document.getElementById("open_time").value,
+                phone: document.getElementById("phone").value,
+                description: document.getElementById("description").value,
+                location: document.getElementById("location").value,
+                position: document.getElementById("position").value,
+                usage_hours: document.getElementById("usage_hours").value,
+                amenities: document.getElementById("amenities").value
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            currentId = null;
+            loadServices();
+        });
+
+        return;
+    }
+
+
+    fetch(API + "/service/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            price: document.getElementById("price").value,
+            category: document.getElementById("category").value,
+            image: document.getElementById("image").value,
+            open_time: document.getElementById("open_time").value,
+            phone: document.getElementById("phone").value,
+            description: document.getElementById("description").value,
+            location: document.getElementById("location").value,
+            position: document.getElementById("position").value,
+            usage_hours: document.getElementById("usage_hours").value,
+            amenities: document.getElementById("amenities").value
+            
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadServices();
+    });
+}
+
+function loadServices() {
+    fetch(API + "/service/list")
+    .then(res => res.json())
+    .then(data => {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        data.forEach(s => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${s.id}</td>
+                <td>${s.name}</td>
+                <td>${s.category}</td>
+                <td>${s.price}</td>
+                <td>
+                    <button onclick='editService(${JSON.stringify(s)})'>Sửa</button>
+                    <button onclick="deleteService(${s.id})">Xoá</button>
+                </td>
+            `;
+
+            list.appendChild(tr);
+        });
+    });
+}
+
+function editService(s) {
+    document.getElementById("name").value = s.name;
+    document.getElementById("category").value = s.category;
+    document.getElementById("price").value = s.price;
+    document.getElementById("image").value = s.image || "";
+    document.getElementById("open_time").value = s.open_time || "";
+    document.getElementById("phone").value = s.phone || "";
+    document.getElementById("description").value = s.description || "";
+    document.getElementById("location").value = s.location || "";
+    document.getElementById("position").value = s.position || "";
+    document.getElementById("usage_hours").value = s.usage_hours || "";
+    document.getElementById("amenities").value = s.amenities || "";
+    currentId = s.id;
+}
+
+function deleteService(id) {
+    fetch(API + "/service/delete/" + id, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadServices();
+    });
+}
+
+function searchService() {
+    const keyword = document.getElementById("search").value.toLowerCase();
+
+    fetch(API + "/service/list")
+    .then(res => res.json())
+    .then(data => {
+
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        data
+        .filter(s => s.name.toLowerCase().includes(keyword))
+        .forEach(s => {
+
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${s.id}</td>
+                <td>${s.name}</td>
+                <td>${s.category}</td>
+                <td>${s.price}</td>
+                <td>
+                    <button onclick='editService(${JSON.stringify(s)})'>Sửa</button>
+                    <button onclick="deleteService(${s.id})">Xoá</button>
+                </td>
+            `;
+
+            list.appendChild(tr);
+        });
+
+    });
+}
+
+</script>
+
+{% endblock %}

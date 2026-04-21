@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chi tiết phòng chờ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .detail-page {
+            background: #eef1f7;
+        }
+        .detail-page .detail-wrap {
+            max-width: 1080px;
+            margin: 0 auto 40px;
+        }
+        .detail-page section {
+            padding: 0;
+            text-align: left;
+        }
+        .detail-page .hero {
+            position: relative;
+            height: 420px;
+            border-radius: 0 0 14px 14px;
+            overflow: hidden;
+            background: #dfe5f4;
+        }
+        .detail-page .hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .detail-page .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(11, 44, 107, 0.68), rgba(11, 44, 107, 0.18));
+            color: #fff;
+            display: flex;
+            align-items: flex-end;
+            padding: 28px;
+        }
+        .detail-page .hero-title {
+            margin: 0;
+            font-size: 34px;
+            line-height: 1.1;
+        }
+        .detail-page .hero-sub {
+            margin: 8px 0 0;
+            max-width: 520px;
+            opacity: 0.95;
+        }
+        .detail-page .price-quickbar {
+            margin-top: -24px;
+            position: relative;
+            z-index: 2;
+            background: #fff;
+            border: 1px solid #d9e1f5;
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 8px;
+            padding: 10px 14px;
+            align-items: center;
+        }
+        .detail-page .price-item {
+            border-right: 1px solid #edf1fb;
+            padding-right: 8px;
+        }
+        .detail-page .price-item:last-of-type {
+            border-right: none;
+        }
+        .detail-page .price-item span {
+            display: block;
+            font-size: 12px;
+            color: #667;
+        }
+        .detail-page .price-item strong {
+            color: #0b2c6b;
+            font-size: 15px;
+        }
+        .detail-page .main-btn {
+            width: auto;
+            margin-top: 0;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .detail-page .content-grid {
+            margin-top: 16px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+        }
+        .detail-page .card {
+            display: block;
+            width: auto;
+            margin: 0;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #d9e1f5;
+            padding: 16px;
+        }
+        .detail-page .card:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .detail-page .card h3 {
+            margin: 0 0 12px;
+            color: #0b2c6b;
+        }
+        .detail-page .meta-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .detail-page .meta-list li {
+            margin-bottom: 8px;
+            color: #223;
+        }
+        .detail-page .meta-label {
+            display: inline-block;
+            min-width: 96px;
+            color: #556;
+            font-weight: 600;
+        }
+        .detail-page .amenities {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .detail-page .amenity {
+            border: 1px solid #e8edfb;
+            border-radius: 8px;
+            padding: 10px;
+            background: #fafbff;
+            font-size: 14px;
+        }
+        .detail-page .location-box {
+            background: #f7f9ff;
+            border: 1px dashed #c4d1f3;
+            border-radius: 8px;
+            padding: 12px;
+            line-height: 1.5;
+        }
+        .detail-page .gallery-main {
+            width: 100%;
+            height: 220px;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 1px solid #d8e2f8;
+            margin-bottom: 10px;
+        }
+        .detail-page .gallery-thumb-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .detail-page .gallery-thumb {
+            width: 100%;
+            height: 66px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        .detail-page .gallery-thumb.active {
+            border-color: #2e55c7;
+        }
+        .detail-page .desc-text {
+            line-height: 1.65;
+            color: #232c44;
+            text-align: justify;
+        }
+        .detail-page .section-separate {
+            margin-top: 16px;
+        }
+        @media (max-width: 900px) {
+            .detail-page .price-quickbar {
+                grid-template-columns: 1fr 1fr;
+            }
+            .detail-page .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="detail-page">
+<header class="header">
+    <div class="logo">VAA</div>
+    <nav>
+        <a href="/user">Trang chủ</a>
+        <a href="/history">Lịch sử</a>
+    </nav>
+</header>
+
+<div class="detail-wrap">
+    <section class="hero">
+        <img id="heroImage" alt="Ảnh phòng chờ">
+        <div class="hero-overlay">
+            <div>
+                <h1 class="hero-title" id="name"></h1>
+                <p class="hero-sub">Trải nghiệm không gian phòng chờ cao cấp với dịch vụ tiện nghi, riêng tư và nhanh chóng trước chuyến bay.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="price-quickbar">
+        <div class="price-item">
+            <span>Người lớn (12+)</span>
+            <strong id="adultPrice"></strong>
+        </div>
+        <div class="price-item">
+            <span>Trẻ em (5-12)</span>
+            <strong id="childPrice"></strong>
+        </div>
+        <div class="price-item">
+            <span>Em bé (&lt;5)</span>
+            <strong id="infantPrice"></strong>
+        </div>
+        <button class="main-btn" id="bookBtn" onclick="bookNow()">Đặt ngay</button>
+    </section>
+
+    <section class="content-grid">
+        <div>
+            <div class="card">
+                <h3>Thông tin chung</h3>
+                <ul class="meta-list">
+                    <li><span class="meta-label">Mở cửa:</span> <span id="open_time"></span></li>
+                    <li><span class="meta-label">Hotline:</span> <span id="phone"></span></li>
+                    <li><span class="meta-label">Danh mục:</span> <span id="category"></span></li>
+                </ul>
+            </div>
+
+            <div class="card section-separate" id="locationSection">
+                <h3>Địa điểm</h3>
+                <div id="locationInfo" class="location-box"></div>
+            </div>
+
+            <div class="card section-separate" id="amenitiesSection">
+                <h3>Tiện ích</h3>
+                <div class="amenities" id="amenitiesList"></div>
+            </div>
+
+            <div class="card section-separate" id="descriptionSection">
+                <h3>Mô tả chi tiết</h3>
+                <div id="description" class="desc-text"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3>Hình ảnh minh họa</h3>
+                <img id="galleryMain" class="gallery-main" alt="Ảnh phòng chờ chính">
+                <div class="gallery-thumb-row" id="galleryThumbs"></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+let currentService = null;
+
+function formatMoney(num) {
+    return new Intl.NumberFormat("vi-VN").format(Math.round(num || 0)) + " VND";
+}
+
+function getGalleryImages(service) {
+    const seeds = [
+        "lounge-main-" + (service.id || "x"),
+        "lounge-seat-" + (service.id || "x"),
+        "lounge-hall-" + (service.id || "x"),
+        "lounge-food-" + (service.id || "x")
+    ];
+    const generated = seeds.map(seed => `https://picsum.photos/seed/${encodeURIComponent(seed)}/1200/720`);
+
+    const unique = [];
+    const pushIfUnique = (url) => {
+        if (!url) return;
+        const normalized = String(url).trim();
+        if (!normalized) return;
+        if (!unique.includes(normalized)) unique.push(normalized);
+    };
+
+    pushIfUnique(service.image);
+    generated.forEach(pushIfUnique);
+    return unique.slice(0, 4);
+}
+
+function renderGallery(images) {
+    const heroImage = document.getElementById("heroImage");
+    const galleryMain = document.getElementById("galleryMain");
+    const thumbWrap = document.getElementById("galleryThumbs");
+    thumbWrap.innerHTML = "";
+
+    if (!images.length) return;
+
+    const setMain = (url, activeThumb) => {
+        heroImage.src = url;
+        galleryMain.src = url;
+        document.querySelectorAll(".gallery-thumb").forEach(x => x.classList.remove("active"));
+        if (activeThumb) activeThumb.classList.add("active");
+    };
+
+    images.forEach((url, idx) => {
+        const thumb = document.createElement("img");
+        thumb.className = "gallery-thumb" + (idx === 0 ? " active" : "");
+        thumb.src = url;
+        thumb.alt = "Ảnh minh họa " + (idx + 1);
+        thumb.onclick = () => setMain(url, thumb);
+        thumbWrap.appendChild(thumb);
+    });
+
+    setMain(images[0], thumbWrap.querySelector(".gallery-thumb"));
+}
+
+function renderAmenities(amenitiesText) {
+    const list = document.getElementById("amenitiesList");
+    const section = document.getElementById("amenitiesSection");
+    list.innerHTML = "";
+
+    const amenities = String(amenitiesText || "")
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean);
+
+    if (!amenities.length) {
+        section.style.display = "none";
+        return;
+    }
+
+    section.style.display = "";
+    amenities.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "amenity";
+        div.innerText = "✓ " + item;
+        list.appendChild(div);
+    });
+}
+
+    fetch(API + "/service/list")
+    .then(res => res.json())
+    .then(data => {
+        const s = data.find(x => String(x.id) === String(id));
+        if (!s) {
+            alert("Không tìm thấy phòng chờ.");
+            window.location.href = "/user";
+            return;
+        }
+
+        const adult = Number(s.price || 0);
+        const child = adult * 0.7;
+        const infant = adult * 0.2;
+        currentService = s;
+
+        document.getElementById("name").innerText = s.name || "Phòng chờ";
+        document.getElementById("adultPrice").innerText = formatMoney(adult);
+        document.getElementById("childPrice").innerText = formatMoney(child);
+        document.getElementById("infantPrice").innerText = formatMoney(infant);
+
+        document.getElementById("open_time").innerText = s.open_time || "24/7";
+        document.getElementById("phone").innerText = s.phone || "1900 0000";
+        document.getElementById("category").innerText = s.category || "Phòng chờ sân bay";
+
+        const locationParts = [
+            s.location,
+            s.position,
+            s.usage_hours ? ("Số giờ sử dụng: " + s.usage_hours) : ""
+        ].filter(Boolean);
+        const locationSection = document.getElementById("locationSection");
+        const locationText = locationParts.join(". ");
+        if (locationText) {
+            locationSection.style.display = "";
+            document.getElementById("locationInfo").innerText = locationText;
+        } else {
+            locationSection.style.display = "none";
+        }
+
+        const descriptionSection = document.getElementById("descriptionSection");
+        const descriptionText = String(s.description || "").trim();
+        if (descriptionText) {
+            descriptionSection.style.display = "";
+            document.getElementById("description").innerText = descriptionText;
+        } else {
+            descriptionSection.style.display = "none";
+        }
+
+        renderAmenities(s.amenities);
+        renderGallery(getGalleryImages(s));
+
+        // Log view for personalization
+        try {
+            fetch("/activity/log", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ event_type: "view_detail", service_id: s.id, category: s.category })
+            });
+        } catch (e) {}
+
+        const btn = document.getElementById("bookBtn");
+        if (s.category === "restaurant") {
+            btn.textContent = "Đặt bàn";
+        }
+    });
+
+function bookNow() {
+    fetch("/auth/me")
+        .then(res => res.json())
+        .then(data => {
+            if (!data.user) {
+                alert("Vui lòng đăng nhập!");
+                window.location.href = "/login";
+            } else {
+                localStorage.setItem("service_id", id);
+                window.location.href = "/booking";
+            }
+        });
+}
+</script>
+</body>
+</html>

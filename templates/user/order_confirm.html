@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận đơn hàng</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #eef1f7; color: #1d2746; }
+        .oc-page section { padding: 0; text-align: left; }
+        .oc-wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; }
+        .oc-grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 18px; align-items: start; }
+        .oc-panel {
+            background: #fff;
+            border: 1px solid #dce3f7;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+        .oc-panel h3 { margin: 0 0 12px; color: #0b2c6b; font-size: 17px; }
+        .oc-lounge-name { font-weight: 700; font-size: 15px; letter-spacing: 0.02em; margin-bottom: 10px; }
+        .oc-meta { font-size: 14px; line-height: 1.65; color: #2f395a; }
+        .oc-meta div { margin-bottom: 6px; }
+        .oc-warn { color: #c0392b; font-size: 13px; margin-top: 10px; line-height: 1.5; }
+        .oc-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eef1fa; font-size: 14px; }
+        .oc-row:last-child { border-bottom: none; }
+        .oc-row span:first-child { color: #5a678d; }
+        .oc-guest-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .oc-guest-body { margin-top: 10px; }
+        .oc-guest-body.collapsed { display: none; }
+        .oc-note textarea {
+            width: 100%;
+            min-height: 88px;
+            border: 1px solid #c8d1eb;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .oc-note .count { text-align: right; font-size: 12px; color: #667; margin-top: 4px; }
+        .oc-qty-title { font-weight: 700; margin-bottom: 10px; color: #1a2f57; }
+        .oc-line-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: #f7f9ff;
+            border: 1px solid #e4e9fb;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .oc-pay label {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #e0e6f7;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .oc-pay input { margin-top: 4px; }
+        .oc-pay .pay-title { font-weight: 600; color: #0b2c6b; }
+        .oc-pay .pay-sub { font-size: 12px; color: #5a678d; margin-top: 2px; }
+        .oc-summary .big { font-size: 18px; font-weight: 700; color: #0b2c6b; margin-top: 8px; }
+        .oc-confirm {
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            border: none;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .oc-confirm:disabled { opacity: 0.45; cursor: not-allowed; }
+        .oc-confirm:not(:disabled) { background: linear-gradient(90deg, #172f91, #2f57d1); color: #fff; }
+        @media (max-width: 960px) {
+            .oc-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="oc-page">
+<header class="header">
+    <div class="logo">VAA</div>
+    <nav><a href="/user">Trang chủ</a> <a href="/booking">Trở về</a></nav>
+</header>
+
+<div class="oc-wrap">
+    <h1 style="margin: 8px 0 16px; color: #0b2c6b; font-size: 22px;">Xác nhận đơn hàng</h1>
+    <div class="oc-grid">
+        <div>
+            <div class="oc-panel">
+                <h3 id="ocServicePanelTitle">Thông tin phòng chờ</h3>
+                <div class="oc-lounge-name" id="ocServiceName">—</div>
+                <div class="oc-meta" id="ocLoungeMeta"></div>
+                <p class="oc-warn" id="ocWarnText">Lưu ý: Vui lòng kiểm tra kỹ địa chỉ phòng chờ có phù hợp với ga khởi hành của chuyến bay (quốc nội/quốc tế). Trường hợp chọn sai, vé sẽ không sử dụng được.</p>
+            </div>
+
+            <div class="oc-panel">
+                <h3>Thông tin người mua</h3>
+                <div class="oc-row"><span>Họ và tên</span><strong id="ocBuyerName">—</strong></div>
+                <div class="oc-row"><span>Email</span><strong id="ocBuyerEmail">—</strong></div>
+                <div class="oc-row"><span>Số điện thoại</span><strong id="ocBuyerPhone">—</strong></div>
+                <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px;">
+                    <input type="checkbox" id="ocVatInvoice"> Tôi muốn xuất hóa đơn VAT
+                </label>
+            </div>
+
+            <div class="oc-panel" id="ocGuestPanel">
+                <div class="oc-guest-head" onclick="toggleGuest()">
+                    <h3 style="margin:0;">Thông tin khách sử dụng dịch vụ</h3>
+                    <span id="ocGuestChevron">▲</span>
+                </div>
+                <div class="oc-guest-body" id="ocGuestBody">
+                    <div class="oc-row"><span>Số hiệu chuyến bay</span><strong id="ocFlight">—</strong></div>
+                    <div class="oc-row"><span>Ngày sử dụng</span><strong id="ocUseDate">—</strong></div>
+                    <div class="oc-row"><span>Khách 1</span><strong id="ocGuestName">—</strong></div>
+                    <div class="oc-row"><span>Email nhận vé</span><strong id="ocGuestEmail">—</strong></div>
+                    <div class="oc-row"><span>Ngày sinh</span><strong id="ocGuestDob">—</strong></div>
+                </div>
+            </div>
+
+            <div class="oc-panel oc-note">
+                <h3>Ghi chú</h3>
+                <textarea id="ocNote" maxlength="52" placeholder="Vui lòng nhập ghi chú cho đơn hàng (nếu có)"></textarea>
+                <div class="count"><span id="ocNoteCount">0</span>/52 ký tự</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="oc-panel">
+                <div class="oc-qty-title" id="ocQtyTitle">Số lượng khách (<span id="ocGuestTotal">0</span>)</div>
+                <div id="ocQtyLines"></div>
+            </div>
+
+            <div class="oc-panel oc-pay">
+                <h3>Phương thức thanh toán</h3>
+                <label>
+                    <input type="radio" name="payMethod" value="card" checked>
+                    <div>
+                        <div class="pay-title">Thẻ ghi nợ / Thẻ thanh toán quốc tế</div>
+                        <div class="pay-sub">Thanh toán bằng thẻ quốc tế như Visa/Master/Amex/JCB</div>
+                    </div>
+                </label>
+                <label>
+                    <input type="radio" name="payMethod" value="atm">
+                    <div>
+                        <div class="pay-title">Thẻ ATM nội địa</div>
+                        <div class="pay-sub">Thanh toán qua thẻ ATM của các ngân hàng nội địa</div>
+                    </div>
+                </label>
+                <label>
+                    <input type="radio" name="payMethod" value="qr">
+                    <div>
+                        <div class="pay-title">Quét mã QR</div>
+                        <div class="pay-sub">Quét mã QR với ứng dụng di động (Ngân hàng/Ví điện tử)</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="oc-panel oc-summary">
+                <div class="oc-row"><span>Tạm tính trước thuế</span><strong id="ocSub">0 VND</strong></div>
+                <div class="oc-row"><span>Thuế VAT (10%)</span><strong id="ocVat">0 VND</strong></div>
+                <div class="big">Thành tiền <span id="ocTotal">0 VND</span></div>
+                <label style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;font-size:13px;">
+                    <input type="checkbox" id="ocAgreeTerms">
+                    <span>Tôi đồng ý với những điều khoản mua hàng và chính sách bảo mật của VAA.</span>
+                </label>
+                <button type="button" class="oc-confirm" id="ocBtn" disabled onclick="confirmPayment()">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+
+function formatMoney(num) {
+    return new Intl.NumberFormat("vi-VN").format(Math.round(num || 0)) + " VND";
+}
+
+function formatDateVi(iso) {
+    if (!iso) return "—";
+    const p = iso.split("-");
+    if (p.length !== 3) return iso;
+    return `${p[2]}/${p[1]}/${p[0]}`;
+}
+
+function loadOrder() {
+    let raw;
+    try {
+        raw = sessionStorage.getItem("orderConfirmData");
+    } catch (e) {
+        raw = null;
+    }
+    if (!raw) {
+        alert("Không có dữ liệu đơn hàng.");
+        window.location.href = "/user";
+        return;
+    }
+    const d = JSON.parse(raw);
+
+    const isRestaurant = d.serviceCategory === "restaurant";
+    if (isRestaurant) {
+        document.getElementById("ocServicePanelTitle").textContent = "Thông tin nhà hàng & cà phê";
+        document.getElementById("ocWarnText").textContent = "Lưu ý: Vui lòng đến đúng giờ để được giữ bàn. Nếu thay đổi/huỷ, hãy liên hệ hotline nhà hàng.";
+        document.getElementById("ocQtyTitle").textContent = "Thông tin đặt bàn";
+        document.getElementById("ocBtn").textContent = "Xác nhận đặt bàn";
+    }
+
+    renderLoungeInfoFromDb(d);
+
+    document.getElementById("ocBuyerName").textContent = d.buyer?.name || "—";
+    document.getElementById("ocBuyerEmail").textContent = d.buyer?.email || "—";
+    document.getElementById("ocBuyerPhone").textContent = d.buyer?.phone || "—";
+
+    if (isRestaurant) {
+        // Replace guest panel content with reservation info
+        const guestBody = document.getElementById("ocGuestBody");
+        guestBody.innerHTML = `
+            <div class="oc-row"><span>Ngày đặt bàn</span><strong>${formatDateVi(d.reservation?.date)}</strong></div>
+            <div class="oc-row"><span>Giờ</span><strong>${String(d.reservation?.time || "—")}</strong></div>
+            <div class="oc-row"><span>Số người</span><strong>${String(d.reservation?.pax ?? "—")}</strong></div>
+            <div class="oc-row"><span>Mã đặt bàn</span><strong>${String(d.reservation?.id ?? "—")}</strong></div>
+        `;
+    } else {
+        document.getElementById("ocFlight").textContent = d.guest?.flightNumber || "—";
+        document.getElementById("ocUseDate").textContent = formatDateVi(d.guest?.serviceDate);
+        document.getElementById("ocGuestName").textContent = d.guest?.name || "—";
+        document.getElementById("ocGuestEmail").textContent = d.guest?.ticketEmail || "—";
+        document.getElementById("ocGuestDob").textContent = formatDateVi(d.guest?.dob);
+    }
+
+    const lines = [];
+    if (isRestaurant) {
+        const pax = Number(d.reservation?.pax || 0);
+        document.getElementById("ocGuestTotal").textContent = String(pax);
+        lines.push({ label: "Số người", n: pax, unit: Number(d.servicePrice || 0) });
+    } else {
+        const q = d.qty || { adult: 0, child: 0, infant: 0 };
+        const totalPax = (q.adult || 0) + (q.child || 0) + (q.infant || 0);
+        document.getElementById("ocGuestTotal").textContent = String(totalPax);
+
+        const adultUnit = Number(d.servicePrice || 0);
+        const childUnit = adultUnit * 0.7;
+        const infantUnit = adultUnit * 0.2;
+
+        if (q.adult > 0) {
+            lines.push({ label: "Người lớn (Trên 12 tuổi)", n: q.adult, unit: adultUnit });
+        }
+        if (q.child > 0) {
+            lines.push({ label: "Trẻ em (5-12 tuổi)", n: q.child, unit: childUnit });
+        }
+        if (q.infant > 0) {
+            lines.push({ label: "Em bé (Dưới 5 tuổi)", n: q.infant, unit: infantUnit });
+        }
+    }
+    const wrap = document.getElementById("ocQtyLines");
+    wrap.innerHTML = "";
+    lines.forEach(line => {
+        const row = document.createElement("div");
+        row.className = "oc-line-item";
+        row.innerHTML = `
+            <span>👤 ${line.label} &nbsp; x${line.n}</span>
+            <strong>${formatMoney(line.unit * line.n)}</strong>
+        `;
+        wrap.appendChild(row);
+    });
+
+    document.getElementById("ocSub").textContent = formatMoney(d.subtotal);
+    document.getElementById("ocVat").textContent = formatMoney(d.vat);
+    document.getElementById("ocTotal").textContent = formatMoney(d.total);
+
+    window.__orderData = d;
+}
+
+function toDisplayText(value) {
+    const text = String(value || "").trim();
+    return text;
+}
+
+function renderLoungeMeta(meta) {
+    const rows = [];
+    const openTime = toDisplayText(meta.openTime);
+    const location = toDisplayText(meta.location);
+    const position = toDisplayText(meta.position);
+    const usageHours = toDisplayText(meta.durationText);
+
+    if (openTime) rows.push(`🕐 Mở cửa: ${openTime}`);
+    if (location) rows.push(`📍 Địa điểm: ${location}`);
+    if (position) rows.push(`📌 Vị trí: ${position}`);
+    if (usageHours) rows.push(`⏱ Số giờ sử dụng: ${usageHours}`);
+
+    const wrap = document.getElementById("ocLoungeMeta");
+    if (!rows.length) {
+        wrap.style.display = "none";
+        return;
+    }
+
+    wrap.style.display = "";
+    wrap.innerHTML = rows.map(x => `<div>${x}</div>`).join("");
+}
+
+function renderLoungeInfoFromDb(orderData) {
+    fetch(API + "/service/list")
+        .then(res => res.json())
+        .then(data => {
+            const service = Array.isArray(data)
+                ? data.find(s => String(s.id) === String(orderData.serviceId))
+                : null;
+
+            const serviceName = service?.name || orderData.serviceName || "—";
+            const openTime = service?.open_time || orderData.openTime || "";
+            const location = service?.location || orderData.location || "";
+            const position = service?.position || orderData.position || "";
+            const usageHours = service?.usage_hours || orderData.durationText || "";
+
+            document.getElementById("ocServiceName").textContent = serviceName;
+            renderLoungeMeta({ openTime, location, position, durationText: usageHours });
+
+            // Đồng bộ lại dữ liệu order theo DB để các bước sau dùng dữ liệu mới nhất
+            orderData.serviceName = serviceName;
+            orderData.openTime = openTime;
+            orderData.location = location;
+            orderData.position = position;
+            orderData.durationText = usageHours;
+            if (service?.price != null) {
+                orderData.servicePrice = Number(service.price || 0);
+            }
+
+            try {
+                sessionStorage.setItem("orderConfirmData", JSON.stringify(orderData));
+            } catch (e) {
+                console.warn(e);
+            }
+        })
+        .catch(() => {
+            // fallback từ dữ liệu đã lưu nếu API lỗi
+            document.getElementById("ocServiceName").textContent = orderData.serviceName || "—";
+            renderLoungeMeta({
+                openTime: orderData.openTime,
+                location: orderData.location,
+                position: orderData.position,
+                durationText: orderData.durationText
+            });
+        });
+}
+
+function toggleGuest() {
+    const body = document.getElementById("ocGuestBody");
+    const ch = document.getElementById("ocGuestChevron");
+    body.classList.toggle("collapsed");
+    ch.textContent = body.classList.contains("collapsed") ? "▼" : "▲";
+}
+
+document.getElementById("ocNote").addEventListener("input", function () {
+    document.getElementById("ocNoteCount").textContent = String(this.value.length);
+});
+
+function refreshConfirmState() {
+    const ok = document.getElementById("ocAgreeTerms").checked;
+    document.getElementById("ocBtn").disabled = !ok;
+}
+
+document.getElementById("ocAgreeTerms").addEventListener("change", refreshConfirmState);
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = String(reader.result || "");
+            resolve(result.split(",")[1] || "");
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+function loadImageAsDataUrl(url) {
+    return fetch(url)
+        .then(res => res.blob())
+        .then(blob => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(String(reader.result || ""));
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        }));
+}
+
+function escapeHtml(str) {
+    return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+async function generateInvoicePdf(orderData, method, note) {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error("Không tải được thư viện PDF.");
+    }
+    if (!window.html2canvas) {
+        throw new Error("Không tải được thư viện render hóa đơn.");
+    }
+
+    const { jsPDF } = window.jspdf;
+    const qrSeed = `INV-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrSeed)}`;
+
+    let qrDataUrl = "";
+    try {
+        qrDataUrl = await loadImageAsDataUrl(qrUrl);
+    } catch (e) {
+        qrDataUrl = "";
+    }
+
+    const buyerName = orderData.buyer?.name || "-";
+    const buyerEmail = orderData.buyer?.email || "-";
+    const buyerPhone = orderData.buyer?.phone || "-";
+    const guestName = orderData.guest?.name || "-";
+    const guestEmail = orderData.guest?.ticketEmail || "-";
+    const flightNumber = orderData.guest?.flightNumber || "-";
+    const useDate = formatDateVi(orderData.guest?.serviceDate);
+    const qtyText = `NL ${orderData.qty?.adult || 0}, TE ${orderData.qty?.child || 0}, EB ${orderData.qty?.infant || 0}`;
+
+    // Render hóa đơn bằng HTML/CSS để giữ font tiếng Việt đẹp, sau đó convert sang PDF
+    const wrap = document.createElement("div");
+    wrap.id = "invoice-render-root";
+    wrap.style.position = "fixed";
+    wrap.style.left = "-10000px";
+    wrap.style.top = "0";
+    wrap.style.width = "794px"; // ~A4 width at 96dpi
+    wrap.style.background = "#ffffff";
+    wrap.style.padding = "0";
+    wrap.style.zIndex = "-1";
+
+    wrap.innerHTML = `
+        <div style="
+            width: 794px;
+            box-sizing: border-box;
+            padding: 34px 34px 28px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #0f172a;
+        ">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:18px;">
+                <div>
+                    <div style="font-size:24px; font-weight:800; letter-spacing:0.4px; color:#0b2c6b;">
+                        HÓA ĐƠN ĐIỆN TỬ
+                    </div>
+                    <div style="margin-top:6px; font-size:12.5px; color:#475569;">
+                        Mã hóa đơn: <span style="font-weight:700; color:#0f172a;">${escapeHtml(qrSeed)}</span>
+                    </div>
+                </div>
+                <div style="text-align:center;">
+                    ${qrDataUrl ? `<img alt="QR xác thực" src="${qrDataUrl}" style="width:120px;height:120px;border-radius:10px;border:1px solid rgba(15,23,42,0.12);" />` : ``}
+                    <div style="font-size:11px; color:#64748b; margin-top:6px;">QR xác thực</div>
+                </div>
+            </div>
+
+            <div style="height:1px;background:rgba(15,23,42,0.10);margin:18px 0 16px;"></div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+                <div style="border:1px solid rgba(15,23,42,0.10); border-radius:14px; padding:14px;">
+                    <div style="font-size:13px; font-weight:800; color:#0b2c6b; margin-bottom:10px;">Thông tin đơn hàng</div>
+                    <div style="font-size:13px; line-height:1.65;">
+                        <div><span style="color:#64748b;">Dịch vụ:</span> <span style="font-weight:700;">${escapeHtml(orderData.serviceName || "-")}</span></div>
+                        <div><span style="color:#64748b;">Ngày sử dụng:</span> <span style="font-weight:700;">${escapeHtml(useDate)}</span></div>
+                        <div><span style="color:#64748b;">Số lượng:</span> <span style="font-weight:700;">${escapeHtml(qtyText)}</span></div>
+                        <div><span style="color:#64748b;">Phương thức:</span> <span style="font-weight:700;">${escapeHtml(method)}</span></div>
+                    </div>
+                </div>
+
+                <div style="border:1px solid rgba(15,23,42,0.10); border-radius:14px; padding:14px;">
+                    <div style="font-size:13px; font-weight:800; color:#0b2c6b; margin-bottom:10px;">Thông tin khách hàng</div>
+                    <div style="font-size:13px; line-height:1.65;">
+                        <div><span style="color:#64748b;">Người mua:</span> <span style="font-weight:700;">${escapeHtml(buyerName)}</span></div>
+                        <div><span style="color:#64748b;">Email:</span> <span style="font-weight:700;">${escapeHtml(buyerEmail)}</span></div>
+                        <div><span style="color:#64748b;">SĐT:</span> <span style="font-weight:700;">${escapeHtml(buyerPhone)}</span></div>
+                        <div style="margin-top:8px; color:#64748b;">Khách sử dụng: <span style="font-weight:700; color:#0f172a;">${escapeHtml(guestName)}</span></div>
+                        <div style="color:#64748b;">Email nhận vé: <span style="font-weight:700; color:#0f172a;">${escapeHtml(guestEmail)}</span></div>
+                        <div style="color:#64748b;">Số hiệu chuyến bay: <span style="font-weight:700; color:#0f172a;">${escapeHtml(flightNumber)}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:14px; border:1px solid rgba(15,23,42,0.10); border-radius:14px; overflow:hidden;">
+                <div style="background:#0b2c6b; color:#fff; padding:10px 14px; font-size:13px; font-weight:800;">Chi tiết thanh toán</div>
+                <div style="padding:12px 14px;">
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(15,23,42,0.08); font-size:13px;">
+                        <span style="color:#64748b;">Tạm tính</span>
+                        <span style="font-weight:800;">${escapeHtml(formatMoney(orderData.subtotal))}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(15,23,42,0.08); font-size:13px;">
+                        <span style="color:#64748b;">VAT (10%)</span>
+                        <span style="font-weight:800;">${escapeHtml(formatMoney(orderData.vat))}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:10px 0 4px; font-size:15px;">
+                        <span style="color:#0f172a; font-weight:900;">Thành tiền</span>
+                        <span style="font-weight:900; color:#0b2c6b;">${escapeHtml(formatMoney(orderData.total))}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:14px; border:1px dashed rgba(15,23,42,0.22); border-radius:14px; padding:12px 14px;">
+                <div style="font-size:12px; font-weight:800; color:#0b2c6b; margin-bottom:6px;">Ghi chú</div>
+                <div style="font-size:12.5px; line-height:1.55; color:#334155;">${escapeHtml(note || "-")}</div>
+            </div>
+
+            <div style="margin-top:14px; font-size:11.5px; color:#64748b; line-height:1.55;">
+                Hóa đơn điện tử này được tạo tự động sau khi thanh toán thành công. Vui lòng giữ lại để đối chiếu khi cần.
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(wrap);
+
+    try {
+        const canvas = await window.html2canvas(wrap, {
+            backgroundColor: "#ffffff",
+            scale: Math.min(2, window.devicePixelRatio || 1),
+            useCORS: true
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        const imgWidth = pageWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+            doc.addPage();
+            position -= pageHeight;
+            doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+        }
+
+        return doc.output("blob");
+    } finally {
+        wrap.remove();
+    }
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function sendInvoiceEmail(orderData, pdfBlob) {
+    const base64 = await blobToBase64(pdfBlob);
+    const payload = {
+        recipient: orderData.buyer?.email || orderData.guest?.ticketEmail || "",
+        subject: "Hoa don dien tu dat dich vu san bay",
+        body: "Xin chao, vui long xem hoa don dien tu dinh kem (PDF + QR).",
+        filename: "hoa-don-dien-tu.pdf",
+        pdf_base64: base64
+    };
+
+    const res = await fetch("/invoice/send", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+        throw new Error(data.message || "Gửi email thất bại.");
+    }
+    return data;
+}
+
+async function confirmPayment() {
+    const method = document.querySelector('input[name="payMethod"]:checked')?.value || "card";
+    const note = document.getElementById("ocNote").value.trim();
+    const vat = document.getElementById("ocVatInvoice").checked;
+    const d = window.__orderData;
+    if (!d) return;
+
+    console.log("[Giả lập thanh toán]", { method, note, vatWant: vat, order: d });
+
+    // Đồng bộ trạng thái thanh toán cho admin (chỉ áp dụng cho booking dạng vé)
+    if (d.serviceCategory !== "restaurant") {
+        try {
+            if (d.passengerId) {
+                await fetch("/passenger/pay/" + d.passengerId, { method: "PUT" });
+            }
+        } catch (e) {}
+    }
+
+    let emailMessage = "";
+    try {
+        if (vat) {
+            const pdfBlob = await generateInvoicePdf(d, method, note);
+            downloadBlob(pdfBlob, "hoa-don-dien-tu.pdf");
+            const emailResult = await sendInvoiceEmail(d, pdfBlob);
+            emailMessage = "\n" + (emailResult.message || "Đã gửi email hóa đơn.");
+        }
+    } catch (e) {
+        emailMessage = "\nLỗi hóa đơn/email: " + (e.message || "Không xác định");
+    }
+
+    alert(
+        (d.serviceCategory === "restaurant"
+            ? ("Đặt bàn thành công.\nPhương thức: " + method + "\nChi phí ước tính: " + formatMoney(d.total))
+            : ("Thanh toán thành công (giả lập).\nPhương thức: " + method + "\nSố tiền: " + formatMoney(d.total))) +
+        (vat ? "\nĐã xuất hóa đơn VAT." : "\nKhông xuất hóa đơn VAT.") +
+        emailMessage
+    );
+
+    try {
+        sessionStorage.removeItem("orderConfirmData");
+    } catch (e) {}
+
+    window.location.href = "/user";
+}
+
+document.addEventListener("DOMContentLoaded", loadOrder);
+</script>
+</body>
+</html>

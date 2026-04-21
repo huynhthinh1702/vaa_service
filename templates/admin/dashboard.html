@@ -1,0 +1,119 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="grid cols-2" style="margin-bottom: 16px;">
+    <div class="kpi">
+        <div>
+            <p class="label">Tổng doanh thu</p>
+            <p class="value" id="revenue">0</p>
+            <p class="hint">Cập nhật theo dữ liệu booking</p>
+        </div>
+        <div style="opacity:.9; font-weight:700;">VND</div>
+    </div>
+
+    <div class="kpi" style="background: linear-gradient(135deg, #0b2c6b, #0ea5e9);">
+        <div>
+            <p class="label">Tổng booking</p>
+            <p class="value" id="count">0</p>
+            <p class="hint">Số lượng booking hiện có</p>
+        </div>
+        <div style="opacity:.9; font-weight:700;">TOTAL</div>
+    </div>
+</div>
+
+<div class="panel">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px;">
+        <div>
+            <div class="page-title" style="font-size:16px;">Doanh thu theo ngày</div>
+            <div class="page-subtitle">Biểu đồ tổng doanh thu theo từng ngày</div>
+        </div>
+        <div style="color:#64748b; font-size:12px;">Chart.js</div>
+    </div>
+    <div style="position:relative; width:100%; height: 360px;">
+        <canvas id="chart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const API = "http://127.0.0.1:5000";
+
+// LOAD REVENUE
+function loadRevenue() {
+    fetch(API + "/dashboard/revenue")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("revenue").innerText = formatMoney(data.revenue);
+    });
+}
+
+// LOAD COUNT
+function loadCount() {
+    fetch(API + "/dashboard/booking-count")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("count").innerText = data.count;
+    });
+}
+
+// FORMAT TIỀN
+function formatMoney(num) {
+    return new Intl.NumberFormat('vi-VN').format(num) + " VND";
+}
+
+// CHART
+function loadChart() {
+    fetch(API + "/dashboard/revenue-by-date")
+    .then(res => res.json())
+    .then(data => {
+
+        const labels = data.map(d => d.date);
+        const values = data.map(d => d.total);
+
+        new Chart(document.getElementById("chart"), {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Doanh thu",
+                    data: values,
+                    borderWidth: 1,
+                    backgroundColor: "rgba(30, 77, 183, 0.25)",
+                    borderColor: "rgba(30, 77, 183, 0.9)"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: (v) => new Intl.NumberFormat('vi-VN').format(v)
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => " " + formatMoney(ctx.parsed.y)
+                        }
+                    }
+                }
+            }
+        });
+
+    });
+}
+
+// LOAD ALL
+loadRevenue();
+loadCount();
+loadChart();
+
+</script>
+
+{% endblock %}

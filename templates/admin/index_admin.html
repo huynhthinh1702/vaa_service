@@ -1,0 +1,207 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Thêm / Cập nhật hành khách</h2>
+
+    <input id="name" placeholder="Tên">
+    <input id="cccd" placeholder="CCCD">
+    <input id="phone" placeholder="Số điện thoại">
+    <select id="ticket_class">
+        <option value="Eco">Eco</option>
+        <option value="Business">Business</option>
+    </select>
+
+    <button onclick="addPassenger()">Thêm</button>
+    <button onclick="updatePassenger()">Update</button>
+</div>
+
+<div class="card">
+    <h2>Danh sách hành khách</h2>
+
+    <button onclick="loadPassengers()">Load</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên</th>
+                <th>SĐT</th>
+                <th>Trạng thái</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+</div>
+
+<!-- BOX CHI TIẾT -->
+<div class="card" id="detailBox" style="display:none;">
+    <h3>Chi tiết khách hàng</h3>
+    <div id="detailContent"></div>
+</div>
+
+<script>
+
+let currentId = null;
+const API = "http://127.0.0.1:5000";
+
+function addPassenger() {
+    fetch(API + "/passenger/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            cccd: document.getElementById("cccd").value,
+            phone: document.getElementById("phone").value,
+            flight_id: 1,
+            ticket_class: document.getElementById("ticket_class").value,
+            checkin_status: "Not Checked",
+            payment_status: "Unpaid"
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadPassengers();
+    });
+}
+
+function isPaid(p) {
+    const s = (p.payment_status || "Unpaid").toString().toLowerCase();
+    return s === "paid" || s === "đã thanh toán" || s === "da thanh toan";
+}
+
+function normalizePaymentLabel(p) {
+    return isPaid(p) ? "Đã thanh toán" : "Chưa thanh toán";
+}
+
+function normalizeCheckinLabel(p) {
+    const s = (p.checkin_status || "Not Checked").toString().toLowerCase();
+    // "Not Checked" cũng chứa chữ "checked" nên phải ưu tiên bắt "not checked" trước
+    if (s.includes("not checked") || (s.includes("not") && s.includes("checked"))) return "Uncheck";
+    if (s === "checked" || (s.includes("checked") && !s.includes("not"))) return "Checked";
+    return p.checkin_status || "Uncheck";
+}
+
+function loadPassengers() {
+    fetch(API + "/passenger/list")
+    .then(res => res.json())
+    .then(data => {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        data.forEach(p => {
+            const tr = document.createElement("tr");
+            const paid = isPaid(p);
+            const paymentLabel = normalizePaymentLabel(p);
+            const checkinLabel = normalizeCheckinLabel(p);
+            const checkinOk = paid;
+
+            tr.innerHTML = `
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.phone || ""}</td>
+                <td>
+                    <div class="status-stack">
+                        <span class="badge ${checkinLabel === "Checked" ? "success" : "warning"}">Check-in: ${checkinLabel}</span>
+                        <span class="badge ${paid ? "success" : "warning"}">Thanh toán: ${paymentLabel}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="actions">
+                        <button onclick='event.stopPropagation(); editPassenger(${JSON.stringify(p)})'>Sửa</button>
+                        <button onclick="event.stopPropagation(); deletePassenger(${p.id})">Xoá</button>
+                        <button class="${checkinOk ? "" : "secondary"}" onclick="event.stopPropagation(); checkin(${p.id}, ${paid})">Check-in</button>
+                    </div>
+                </td>
+            `;
+
+            //CLiCK ĐỂ HIỆN CHI TIẾT
+            tr.onclick = () => showDetail(p.id);
+
+            list.appendChild(tr);
+        });
+    });
+}
+
+function deletePassenger(id) {
+    fetch(API + "/passenger/delete/" + id, { method: "DELETE" })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadPassengers();
+    });
+}
+
+function editPassenger(p) {
+    document.getElementById("name").value = p.name;
+    document.getElementById("cccd").value = p.cccd;
+    document.getElementById("ticket_class").value = p.ticket_class;
+    currentId = p.id;
+}
+
+function updatePassenger() {
+    fetch(API + "/passenger/update/" + currentId, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            cccd: document.getElementById("cccd").value,
+            ticket_class: document.getElementById("ticket_class").value,
+            checkin_status: "Not Checked"
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadPassengers();
+    });
+}
+
+function checkin(id, paid) {
+    if (!paid) {
+        alert("Khách hàng chưa thanh toán nên không thể check-in.");
+        return;
+    }
+    fetch(API + "/passenger/checkin/" + id, {
+        method: "PUT"
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadPassengers();
+    });
+}
+
+// HIỂN THỊ CHI TIẾT
+function showDetail(id) {
+    fetch(API + "/passenger/" + id + "/detail")
+    .then(res => res.json())
+    .then(data => {
+
+        const box = document.getElementById("detailBox");
+        const content = document.getElementById("detailContent");
+
+        let html = "<ul>";
+
+        data.services.forEach(s => {
+            html += `
+                <li>
+                    ${s.name} - SL: ${s.quantity} - ${s.total} VND
+                </li>
+            `;
+        });
+
+        html += "</ul>";
+        html += "<h3>Tổng tiền: " + data.total + " VND</h3>";
+
+        content.innerHTML = html;
+        box.style.display = "block";
+    });
+}
+
+</script>
+
+{% endblock %}

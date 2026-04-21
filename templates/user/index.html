@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trang chủ dịch vụ sân bay</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .home-page {
+            background: #eef1f7;
+            color: #1d2746;
+        }
+        .home-page .home-wrap {
+            
+            margin: 0 auto;
+        }
+        .home-page section {
+            padding: 0;
+            text-align: left;
+        }
+        .home-topbar {
+            background: #fff;
+            border-bottom: 1px solid #dce3f7;
+            font-size: 12px;
+            color: #4b5a83;
+        }
+        .home-topbar .home-wrap {
+            padding: 6px 14px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+        }
+        .home-header {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .home-header .header {
+            padding: 12px 22px;
+        }
+        .logo {
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+        .hero-slider {
+            margin-top: 0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 0 0 14px 14px;
+            height: 460px;
+            background: #cfd5e5;
+        }
+        .hero-track {
+            display: flex;
+            height: 100%;
+            transition: transform 0.45s ease;
+        }
+        .hero-slide {
+            min-width: 100%;
+            position: relative;
+        }
+        .hero-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(3, 15, 45, 0.82), rgba(3, 15, 45, 0.22));
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 70px;
+        }
+        .hero-kicker {
+            font-size: 17px;
+            margin: 0 0 8px;
+            opacity: 0.9;
+        }
+        .hero-title {
+            font-size: 48px;
+            line-height: 1.06;
+            margin: 0;
+            max-width: 620px;
+        }
+        .hero-desc {
+            margin-top: 16px;
+            font-size: 18px;
+            max-width: 620px;
+            color: #e8eeff;
+        }
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.88);
+            color: #0b2c6b;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 2;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+        }
+        .slider-arrow.left {
+            left: 16px;
+        }
+        .slider-arrow.right {
+            right: 16px;
+        }
+        .slider-dots {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 2;
+        }
+        .slider-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            border: none;
+            background: rgba(255, 255, 255, 0.55);
+            cursor: pointer;
+        }
+        .slider-dot.active {
+            background: #fff;
+            width: 26px;
+        }
+        .about-block {
+            background: #fff;
+            margin-top: 20px;
+            border-radius: 14px;
+            border: 1px solid #dce3f7;
+            padding: 26px;
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 24px;
+            align-items: center;
+        }
+        .about-image {
+            width: 90%;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid #dbe3f7;
+        }
+        .about-title {
+            margin: 0 0 6px;
+            font-size: 38px;
+            color: #0b2c6b;
+        }
+        .about-sub {
+            margin: 0 0 12px;
+            font-size: 16px;
+            color: #2f3c67;
+            font-weight: 600;
+        }
+        .about-text {
+            line-height: 1.72;
+            margin: 0;
+            color: #2f3855;
+            text-align: justify;
+        }
+        .focus-services {
+            margin-top: 20px;
+            background: #e9edf6;
+            border-radius: 14px;
+            border: 1px solid #dbe2f5;
+            padding: 24px;
+        }
+        .focus-title {
+            margin: 0 0 18px;
+            color: #0b2c6b;
+            font-size: 36px;
+            text-align: center;
+        }
+        .focus-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+        .focus-card {
+            background: #fff;
+            border: 1px solid #dbe2f5;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .focus-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px rgba(11, 44, 107, 0.16);
+        }
+        .focus-icon {
+            font-size: 46px;
+            margin-bottom: 10px;
+            color: #0b2c6b;
+        }
+        .focus-card h3 {
+            margin: 4px 0 8px;
+            font-size: 21px;
+            color: #18244a;
+        }
+        .focus-card p {
+            margin: 0;
+            color: #4a567e;
+            line-height: 1.6;
+        }
+        .rec-thumb {
+            width: 100%;
+            height: 160px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid #dbe2f5;
+            margin-bottom: 10px;
+            background: #f3f6ff;
+        }
+        .footer-clean {
+            margin-top: 24px;
+            background: #fff;
+            border-top: 1px solid #dce3f7;
+            color: #273456;
+        }
+        .footer-clean .home-wrap {
+            padding: 22px 18px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+        }
+        .footer-clean h4 {
+            margin: 0 0 10px;
+            color: #0b2c6b;
+        }
+        .footer-clean p {
+            margin: 0;
+            line-height: 1.65;
+        }
+        .footer-bottom {
+            border-top: 1px solid #edf1fa;
+            text-align: center;
+            padding: 10px;
+            font-size: 13px;
+            color: #576589;
+        }
+        @media (max-width: 980px) {
+            .hero-slider {
+                height: 380px;
+            }
+            .hero-overlay {
+                padding: 0 24px;
+            }
+            .hero-title {
+                font-size: 34px;
+            }
+            .about-block {
+                grid-template-columns: 1fr;
+            }
+            .focus-grid,
+            .footer-clean .home-wrap {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="home-page">
+<div class="home-topbar">
+    <div class="home-wrap">
+        <span>Hotline: (+84) 90 149 3366</span>
+        <span>Hỗ trợ 24/7</span>
+    </div>
+</div>
+
+<div class="home-header">
+    <header class="header home-wrap">
+        <div class="logo">VAA</div>
+        <nav>
+            <a href="/user">Trang chủ</a>
+            <a href="#focus">Dịch vụ</a>
+            <a href="#about">Giới thiệu</a>
+        </nav>
+        <div class="auth" id="authBox"></div>
+    </header>
+</div>
+
+<main class="home-wrap">
+    <section class="hero-slider" id="slider">
+        <div class="hero-track" id="heroTrack">
+            <article class="hero-slide">
+                <img src="https://images.unsplash.com/photo-1540339832862-474599807836?q=80&w=1600&auto=format&fit=crop" alt="Airport lounge">
+                <div class="hero-overlay">
+                    <div>
+                        <p class="hero-kicker">The Airport Lounge Privilege</p>
+                        <h1 class="hero-title">Trải nghiệm dịch vụ sân bay đẳng cấp</h1>
+                        <p class="hero-desc">Tập trung 3 dịch vụ trọng tâm: Nhà hàng & Cà phê, Phòng chờ thương gia, Khu ngủ yên tĩnh.</p>
+                    </div>
+                </div>
+            </article>
+            <article class="hero-slide">
+                <img src="https://images.unsplash.com/photo-1529074963764-98f45c47344b?q=80&w=1600&auto=format&fit=crop" alt="Lounge service">
+                <div class="hero-overlay">
+                    <div>
+                        <p class="hero-kicker">Premium Airport Services</p>
+                        <h1 class="hero-title">Nghỉ ngơi thoải mái trước chuyến bay</h1>
+                        <p class="hero-desc">Không gian hiện đại, tiện nghi đầy đủ, quy trình đặt nhanh và hỗ trợ hành khách mọi thời điểm.</p>
+                    </div>
+                </div>
+            </article>
+            <article class="hero-slide">
+                <img src="https://images.unsplash.com/photo-1474302770737-173ee21bab63?q=80&w=1600&auto=format&fit=crop" alt="Cafe and restaurant">
+                <div class="hero-overlay">
+                    <div>
+                        <p class="hero-kicker">Comfort Before Takeoff</p>
+                        <h1 class="hero-title">Thưởng thức ẩm thực và thư giãn tiện lợi</h1>
+                        <p class="hero-desc">Từ bữa ăn nhanh đến khu vực nghỉ riêng tư, mang đến trải nghiệm trọn vẹn tại sân bay.</p>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <button class="slider-arrow left" onclick="prevSlide()">‹</button>
+        <button class="slider-arrow right" onclick="nextSlide()">›</button>
+        <div class="slider-dots" id="sliderDots"></div>
+    </section>
+
+    <section class="about-block" id="about">
+        <img class="about-image" src="https://static.vecteezy.com/system/resources/previews/020/037/688/non_2x/vaa-letter-logo-design-on-white-background-vaa-creative-circle-letter-logo-concept-vaa-letter-design-vector.jpg" alt="VAA overview">
+        <div>
+            <h2 class="about-title">Về chúng tôi - VAA</h2>
+            <p class="about-sub">Đơn vị tiên phong dịch vụ sân bay tại Việt Nam</p>
+            <p class="about-text">
+                VAA là hệ sinh thái dịch vụ sân bay hướng đến sự tiện nghi và chất lượng cho hành khách trong nước và quốc tế.
+                Chúng tôi tập trung vận hành các dịch vụ thiết yếu tại sân bay như phòng chờ thương gia, nhà hàng - cà phê và khu ngủ ngắn hạn.
+                Với đội ngũ giàu kinh nghiệm, quy trình phục vụ tiêu chuẩn và không gian được đầu tư đồng bộ, VAA cam kết mang đến trải nghiệm
+                an tâm, nhanh chóng và đẳng cấp trước mỗi hành trình bay.
+            </p>
+        </div>
+    </section>
+
+    <section class="focus-services" id="focus">
+        <h2 class="focus-title">Dịch vụ tại sân bay</h2>
+        <div class="focus-grid">
+            <article class="focus-card" onclick="goCategory('restaurant')">
+                <div class="focus-icon">🍽️</div>
+                <h3>Nhà hàng & Cà phê</h3>
+                <p>Thực đơn đa dạng, phục vụ nhanh, không gian ngồi thoải mái phù hợp trước giờ khởi hành.</p>
+            </article>
+            <article class="focus-card" onclick="goCategory('lounge')">
+                <div class="focus-icon">💺</div>
+                <h3>Phòng chờ thương gia</h3>
+                <p>Khu vực yên tĩnh, tiện ích cao cấp, lý tưởng để nghỉ ngơi và làm việc trong lúc chờ chuyến bay.</p>
+            </article>
+            <article class="focus-card" onclick="goCategory('sleep')">
+                <div class="focus-icon">🛏️</div>
+                <h3>Khu ngủ</h3>
+                <p>Không gian riêng tư để ngủ ngắn, nạp lại năng lượng, đặc biệt phù hợp cho chuyến bay nối chuyến.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="focus-services" id="personalize" style="background:#fff;border:1px solid #dce3f7;">
+        <h2 class="focus-title" style="margin-bottom:6px;">Gợi ý cho bạn</h2>
+        <p style="text-align:center;margin:0 0 16px;color:#4a567e;">Dựa trên hành vi xem dịch vụ và danh mục bạn quan tâm.</p>
+        <div class="focus-grid" id="recommendGrid"></div>
+        <div id="recommendEmpty" class="empty-message" style="display:none;margin-top:12px;">Chưa đủ dữ liệu để gợi ý. Hãy xem vài dịch vụ để hệ thống đề xuất tốt hơn.</div>
+    </section>
+</main>
+
+<footer class="footer-clean">
+    <div class="home-wrap">
+        <div>
+            <h4>VAA</h4>
+            <p>Công ty CPDV Hàng không sân bay Tân Sơn Nhất.</p>
+        </div>
+        <div>
+            <h4>Liên hệ</h4>
+            <p>Hotline: (+84) 90 149 3366<br>Email: VAAs@vaa.com.vn</p>
+        </div>
+        <div>
+            <h4>Hỗ trợ</h4>
+            <p>Câu hỏi thường gặp<br>Chính sách thanh toán<br>Điều khoản sử dụng</p>
+        </div>
+    </div>
+    <div class="footer-bottom">Copyright © 2026 - VAA</div>
+</footer>
+
+<script>
+const API = "http://127.0.0.1:5000";
+let currentSlide = 0;
+let sliderTimer = null;
+
+function setupSlider() {
+    const track = document.getElementById("heroTrack");
+    const slides = document.querySelectorAll(".hero-slide");
+    const dotsWrap = document.getElementById("sliderDots");
+    dotsWrap.innerHTML = "";
+
+    slides.forEach((_, i) => {
+        const dot = document.createElement("button");
+        dot.className = "slider-dot" + (i === 0 ? " active" : "");
+        dot.onclick = () => goSlide(i);
+        dotsWrap.appendChild(dot);
+    });
+
+    function render() {
+        track.style.transform = `translateX(${-currentSlide * 100}%)`;
+        document.querySelectorAll(".slider-dot").forEach((dot, i) => {
+            dot.classList.toggle("active", i === currentSlide);
+        });
+    }
+
+    window.goSlide = (index) => {
+        currentSlide = index;
+        render();
+        restartAutoSlide();
+    };
+
+    window.nextSlide = () => {
+        currentSlide = (currentSlide + 1) % slides.length;
+        render();
+        restartAutoSlide();
+    };
+
+    window.prevSlide = () => {
+        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+        render();
+        restartAutoSlide();
+    };
+
+    function restartAutoSlide() {
+        clearInterval(sliderTimer);
+        sliderTimer = setInterval(() => {
+            currentSlide = (currentSlide + 1) % slides.length;
+            render();
+        }, 5000);
+    }
+
+    render();
+    restartAutoSlide();
+}
+
+function checkLogin() {
+    fetch("/auth/me")
+    .then(res => res.json())
+    .then(data => {
+        const box = document.getElementById("authBox");
+
+        if (data.user) {
+            let adminBtn = "";
+
+            if (data.role === "admin") {
+                adminBtn = `<a href="/admin"><button>Admin</button></a>`;
+            }
+
+            box.innerHTML = `
+                Xin chào, ${data.user}
+                ${adminBtn}
+                <a href="/history"><button>Lịch sử</button></a>
+                <button onclick="logout()">Logout</button>
+            `;
+        } else {
+            box.innerHTML = `
+                <a href="/login"><button>Đăng nhập</button></a>
+                <a href="/register"><button>Đăng ký</button></a>
+            `;
+        }
+    });
+}
+
+function logout() {
+    fetch("/auth/logout")
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        location.reload();
+    });
+}
+
+function goCategory(type) {
+    window.location.href = "/category?type=" + type;
+}
+
+function formatMoney(value) {
+    return new Intl.NumberFormat("vi-VN").format(Math.round(Number(value) || 0)) + " VND";
+}
+
+function loadRecommendations() {
+    fetch("/recommendations")
+        .then(res => res.json())
+        .then(data => {
+            const items = data.items || [];
+            const grid = document.getElementById("recommendGrid");
+            const empty = document.getElementById("recommendEmpty");
+            grid.innerHTML = "";
+            if (!items.length) {
+                empty.style.display = "block";
+                return;
+            }
+            empty.style.display = "none";
+
+            items.slice(0, 3).forEach(s => {
+                const card = document.createElement("article");
+                card.className = "focus-card";
+                card.onclick = () => (window.location.href = "/detail?id=" + s.id);
+                const img = (s.image && String(s.image).trim()) ? String(s.image).trim() : `https://picsum.photos/seed/${encodeURIComponent("rec-" + (s.id || "x"))}/900/600`;
+                card.innerHTML = `
+                    <img class="rec-thumb" src="${img}" alt="${(s.name || "Dịch vụ")}">
+                    <h3 style="min-height:auto;">${s.name || "Dịch vụ"}</h3>
+                    <p>Giá từ <b>${formatMoney(s.price)}</b> • Mở cửa: ${s.open_time || "24/7"}</p>
+                `;
+                grid.appendChild(card);
+            });
+        })
+        .catch(() => {
+            const empty = document.getElementById("recommendEmpty");
+            empty.style.display = "block";
+        });
+}
+
+checkLogin();
+setupSlider();
+loadRecommendations();
+</script>
+
+</body>
+</html>

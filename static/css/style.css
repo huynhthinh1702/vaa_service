@@ -1,0 +1,315 @@
+body {
+    font-family: Arial;
+    margin: 0;
+}
+
+/* HEADER */
+header {
+    background: #003366;
+    color: white;
+    padding: 15px;
+}
+
+nav a {
+    color: white;
+    margin-right: 20px;
+    text-decoration: none;
+}
+
+/* BANNER */
+.banner {
+    height: 300px;
+    background: url("https://images.unsplash.com/photo-1504196606672-aef5c9cefc92") no-repeat center;
+    background-size: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 30px;
+}
+
+/* SERVICES */
+.services {
+    padding: 40px;
+    text-align: center;
+}
+
+.card {
+    display: inline-block;
+    width: 250px;
+    margin: 10px;
+    padding: 20px;
+    border: 1px solid #ccc;
+}
+
+/* BOOKING */
+.booking {
+    background: #f5f5f5;
+    padding: 40px;
+}
+
+footer {
+    background: #003366;
+    color: white;
+    text-align: center;
+    padding: 10px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0b2c6b;
+    color: white;
+    padding: 15px 40px;
+}
+
+.auth button {
+    margin-left: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+/* MODAL */
+.modal {
+    display: none;
+    position: fixed;
+    top: 30%;
+    left: 40%;
+    background: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+}
+
+/* CARD HOVER */
+.card {
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+section {
+    padding: 50px;
+    text-align: center;
+}
+
+/* ABOUT */
+.about {
+    background: #f5f5f5;
+}
+
+/* ICON GRID */
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.icon-grid div {
+    font-size: 30px;
+}
+
+/* PROMO */
+.promo-grid {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.promo-card {
+    width: 200px;
+    height: 120px;
+    background: #0b2c6b;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+/* NEWS */
+.news-grid {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.news-card {
+    width: 200px;
+    height: 120px;
+    background: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* BUTTON */
+.main-btn {
+    padding: 12px 25px;
+    background: #0b2c6b;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+/* SLIDER */
+/* SLIDER */
+.slider {
+    width: 100%;
+    aspect-ratio: 16/9; /* 🔥 FIX CHÍNH */
+    overflow: hidden;
+    position: relative;
+}
+
+.slides {
+    display: flex;
+    width: 300%;
+    height: 100%;
+    animation: slide 9s infinite;
+}
+
+.slide {
+    width: 100%;
+    flex-shrink: 0;
+
+    background: url("https://images.unsplash.com/photo-1493962853295-0fd70327578a") center/cover no-repeat;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    color: white;
+    font-size: 30px;
+
+    position: relative;
+}
+
+/* 🔥 overlay cho đẹp */
+.slide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+}
+
+.slide * {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes slide {
+    0% {transform: translateX(0);}
+    33% {transform: translateX(0);}
+    36% {transform: translateX(-100%);}
+    66% {transform: translateX(-100%);}
+    69% {transform: translateX(-200%);}
+    100% {transform: translateX(-200%);}
+}
+
+/* IMAGE CARD */
+.card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+/* FORM */
+input {
+    padding: 10px;
+    /* width: 250px; */
+}
+
+button {
+    padding: 10px 20px;
+    background: #0b2c6b;
+    color: white;
+    border: none;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto; /* 🔥 đổi cái này */
+}
+
+th, td {
+    text-align: center;
+    padding: 12px;
+    white-space: nowrap; /* 🔥 tránh xuống dòng */
+}
+
+/* BOOKING PAGE */
+.booking-container {
+    max-width: 500px;
+    margin: 100px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.booking-container input {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.booking-container .main-btn {
+    width: 100%;
+    margin-top: 10px;
+}
+
+#serviceInfo {
+    background: #eef3ff;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+#totalPrice {
+    color: #0b2c6b;
+    margin-top: 15px;
+}
+
+/* 🔥 SERVICE CARD FIX */
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    margin-top: 30px;
+}
+
+.icon-grid div {
+    background: white;
+    padding: 30px 20px;
+    border-radius: 15px;
+    cursor: pointer;
+
+    font-size: 40px;
+    text-align: center;
+
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+/* text bên dưới icon */
+.icon-grid div p {
+    font-size: 18px;
+    margin-top: 10px;
+    color: #333;
+}
+
+/* hover đẹp */
+.icon-grid div:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+    background: #0b2c6b;
+    color: white;
+}
+
+.icon-grid div:hover p {
+    color: white;
+}

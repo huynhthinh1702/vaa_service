@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Danh sách dịch vụ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .category-page {
+            background: #eef1f7;
+            color: #1b2442;
+        }
+        .category-page section {
+            padding: 0;
+            text-align: left;
+        }
+        .category-wrap {
+            max-width: 1200px;
+            margin: 20px auto 30px;
+            padding: 0 16px;
+        }
+        .category-hero {
+            background: #fff;
+            border: 1px solid #dce3f7;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .category-hero h2 {
+            margin: 0 0 8px;
+            text-align: center;
+            color: #0b2c6b;
+            font-size: 36px;
+        }
+        .category-line {
+            width: 120px;
+            height: 3px;
+            border-radius: 99px;
+            background: #2e55c7;
+            margin: 10px auto 16px;
+        }
+        .category-intro {
+            margin: 0 auto;
+            max-width: 950px;
+            line-height: 1.7;
+            color: #2f395a;
+            text-align: justify;
+        }
+        .filter-box {
+            margin-top: 14px;
+            display: flex;
+            justify-content: center;
+        }
+        .filter-box input {
+            width: 360px;
+            max-width: 100%;
+            border: 1px solid #c9d4f2;
+            border-radius: 999px;
+            padding: 10px 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-top: 16px;
+        }
+        .service-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: 0.25s;
+            border: 1px solid #dce3f7;
+            box-shadow: 0 6px 14px rgba(16, 43, 107, 0.08);
+        }
+        .service-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 28px rgba(16, 43, 107, 0.14);
+        }
+        .service-card img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            display: block;
+        }
+        .service-info {
+            padding: 14px;
+        }
+        .service-info h3 {
+            margin: 0 0 8px;
+            color: #0b2c6b;
+            min-height: 48px;
+            font-size: 20px;
+        }
+        .price-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+            background: #f7f9ff;
+            border: 1px solid #e1e8fb;
+            border-radius: 10px;
+            padding: 9px;
+        }
+        .price-item span {
+            display: block;
+            color: #5a678d;
+            font-size: 12px;
+        }
+        .price-item strong {
+            font-size: 13px;
+            color: #1e2d57;
+        }
+        .card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .card-actions.single {
+            grid-template-columns: 1fr;
+        }
+        .btn-outline,
+        .btn-primary {
+            border-radius: 999px;
+            border: 1px solid #2148bf;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-outline {
+            background: #fff;
+            color: #2148bf;
+        }
+        .btn-primary {
+            background: #2148bf;
+            color: #fff;
+        }
+        .empty-message {
+            margin-top: 16px;
+            text-align: center;
+            color: #44527a;
+            background: #fff;
+            border: 1px dashed #c7d4f5;
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .muted {
+            color: #667;
+            font-size: 13px;
+        }
+        .cmp-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 18, 40, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+        .cmp-modal {
+            width: min(980px, 100%);
+            max-height: min(78vh, 700px);
+            overflow: auto;
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid rgba(220, 227, 247, 0.95);
+            box-shadow: 0 28px 70px rgba(10, 18, 40, 0.35);
+        }
+        .cmp-head {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(90deg, #0b2c6b, #2f57d1);
+            color: #fff;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            z-index: 2;
+        }
+        .cmp-title {
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
+        .cmp-close {
+            border: 1px solid rgba(255,255,255,0.55);
+            background: rgba(255,255,255,0.16);
+            color: #fff;
+            border-radius: 12px;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .cmp-body {
+            padding: 14px 16px 18px;
+        }
+        .cmp-grid {
+            display: grid;
+            grid-template-columns: 190px repeat(3, 1fr);
+            gap: 10px;
+            align-items: start;
+        }
+        .cmp-cell {
+            border: 1px solid #e1e8fb;
+            border-radius: 12px;
+            padding: 10px;
+            background: #fff;
+            font-size: 13px;
+            color: #2f395a;
+        }
+        .cmp-cell.key {
+            background: #f7f9ff;
+            font-weight: 800;
+            color: #0b2c6b;
+        }
+        .cmp-service {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .cmp-thumb {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid #dce3f7;
+            background: #f3f6ff;
+        }
+        .cmp-name {
+            font-weight: 800;
+            color: #0b2c6b;
+            line-height: 1.25;
+        }
+        .cmp-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        @media (max-width: 860px) {
+            .cmp-grid { grid-template-columns: 140px repeat(3, 1fr); }
+        }
+        @media (max-width: 740px) {
+            .cmp-grid { grid-template-columns: 1fr; }
+            .cmp-cell.key { position: sticky; top: 56px; z-index: 1; }
+        }
+        @media (max-width: 980px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 680px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="category-page">
+
+<header class="header">
+    <div class="logo">VAA</div>
+    <nav>
+        <a href="/user">Trang chủ</a>
+        <a href="#">Dịch vụ</a>
+        <a href="/history">Lịch sử</a>
+    </nav>
+</header>
+
+<section class="category-wrap">
+    <div class="category-hero">
+        <h2 id="title"></h2>
+        <div class="category-line"></div>
+        <p id="introText" class="category-intro"></p>
+        <div class="filter-box">
+            <input type="text" placeholder="Tìm kiếm dịch vụ..." id="search">
+        </div>
+    </div>
+    <div class="category-hero" style="padding:16px;">
+        <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:12px;align-items:end;">
+            <div>
+                <div style="font-weight:700;color:#0b2c6b;margin-bottom:6px;">Lọc giá nâng cao</div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <input id="minPrice" inputmode="numeric" placeholder="Giá từ (VND)" style="width:160px;border-radius:10px;border:1px solid #c9d4f2;padding:10px 12px;">
+                    <input id="maxPrice" inputmode="numeric" placeholder="Giá đến (VND)" style="width:160px;border-radius:10px;border:1px solid #c9d4f2;padding:10px 12px;">
+                    <button class="btn-primary" style="border-radius:10px;" onclick="applyAdvancedFilter()">Áp dụng</button>
+                    <button class="btn-outline" style="border-radius:10px;" onclick="resetAdvancedFilter()">Reset</button>
+                </div>
+                <div class="muted" style="margin-top:6px;">Gợi ý: có thể nhập 0 hoặc để trống để bỏ qua.</div>
+            </div>
+            <div>
+                <div style="font-weight:700;color:#0b2c6b;margin-bottom:6px;">Sắp xếp</div>
+                <select id="sortBy" style="width:100%;border-radius:10px;border:1px solid #c9d4f2;padding:10px 12px;" onchange="rerender()">
+                    <option value="relevance">Mặc định</option>
+                    <option value="price_asc">Giá tăng dần</option>
+                    <option value="price_desc">Giá giảm dần</option>
+                    <option value="name_asc">Tên A → Z</option>
+                </select>
+            </div>
+            <div>
+                <div style="font-weight:700;color:#0b2c6b;margin-bottom:6px;">So sánh nhanh</div>
+                <div class="muted">Chọn tối đa 3 dịch vụ để so sánh.</div>
+                <div id="compareBar" style="display:none;margin-top:8px;border:1px dashed #c7d4f5;border-radius:12px;padding:10px;background:#fff;">
+                    <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                        <div id="compareNames" style="font-size:13px;color:#2f395a;"></div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-primary" style="border-radius:10px;" onclick="openCompare()">So sánh</button>
+                            <button class="btn-outline" style="border-radius:10px;" onclick="clearCompare()">Xóa</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="grid" id="list"></div>
+    <div id="emptyState" class="empty-message" style="display:none;">Không có dịch vụ phù hợp.</div>
+</section>
+
+<div class="cmp-overlay" id="cmpOverlay" onclick="onOverlayClick(event)">
+    <div class="cmp-modal" role="dialog" aria-modal="true" aria-label="So sánh dịch vụ">
+        <div class="cmp-head">
+            <div class="cmp-title">So sánh dịch vụ</div>
+            <button class="cmp-close" onclick="closeCompare()">Đóng</button>
+        </div>
+        <div class="cmp-body">
+            <div class="muted" style="margin-bottom:10px;">So sánh nhanh các tiêu chí chính. Bạn có thể bỏ chọn dịch vụ trong danh sách và mở lại modal.</div>
+            <div id="cmpTable"></div>
+            <div class="cmp-actions">
+                <button class="btn-outline" style="border-radius:10px;" onclick="clearCompare(); closeCompare();">Xóa lựa chọn</button>
+                <button class="btn-primary" style="border-radius:10px;" onclick="closeCompare()">Xong</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+
+const params = new URLSearchParams(window.location.search);
+const type = params.get("type");
+
+const categoryMeta = {
+    restaurant: {
+        title: "Nhà hàng & Cà phê trong hệ thống",
+        intro: "Không gian ẩm thực tiện lợi tại sân bay với thực đơn đa dạng, phục vụ nhanh và chất lượng ổn định. Phù hợp cho hành khách cần dùng bữa hoặc thư giãn ngắn trước giờ khởi hành."
+    },
+    lounge: {
+        title: "Phòng chờ trong hệ thống",
+        intro: "Điểm khởi đầu cho hành trình bay trọn vẹn - nơi hành khách tận hưởng những phút giây thư giãn trong không gian yên tĩnh và riêng tư, trải nghiệm dịch vụ đẳng cấp không giới hạn."
+    },
+    sleep: {
+        title: "Khu ngủ trong hệ thống",
+        intro: "Giải pháp nghỉ ngơi ngắn hạn cho hành khách nối chuyến hoặc bay đêm. Khu ngủ được thiết kế riêng tư, sạch sẽ, giúp bạn nạp lại năng lượng nhanh chóng trước chuyến đi tiếp theo."
+    }
+};
+
+const selectedMeta = categoryMeta[type] || {
+    title: "Dịch vụ trong hệ thống",
+    intro: "Danh sách dịch vụ theo danh mục bạn đã chọn."
+};
+
+document.getElementById("title").innerText = selectedMeta.title;
+document.getElementById("introText").innerText = selectedMeta.intro;
+
+function formatMoney(value) {
+    return new Intl.NumberFormat("vi-VN").format(Math.round(Number(value) || 0)) + " VND";
+}
+
+let cacheServices = [];
+let advFilter = { min: null, max: null };
+let compareIds = [];
+
+function parsePriceInput(id) {
+    const raw = String(document.getElementById(id).value || "").trim();
+    if (!raw) return null;
+    const n = Number(raw.replaceAll(".", "").replaceAll(",", ""));
+    return Number.isFinite(n) ? n : null;
+}
+
+function applyAdvancedFilter() {
+    advFilter.min = parsePriceInput("minPrice");
+    advFilter.max = parsePriceInput("maxPrice");
+    rerender();
+}
+
+function resetAdvancedFilter() {
+    advFilter = { min: null, max: null };
+    document.getElementById("minPrice").value = "";
+    document.getElementById("maxPrice").value = "";
+    rerender();
+}
+
+function getSelectedSort() {
+    return document.getElementById("sortBy").value || "relevance";
+}
+
+function rerender() {
+    const keyword = document.getElementById("search").value || "";
+    renderList(keyword);
+}
+
+function loadCompare() {
+    try {
+        const raw = localStorage.getItem("compare_ids");
+        const arr = raw ? JSON.parse(raw) : [];
+        compareIds = Array.isArray(arr) ? arr.map(x => String(x)).slice(0, 3) : [];
+    } catch (e) {
+        compareIds = [];
+    }
+    refreshCompareBar();
+}
+
+function saveCompare() {
+    try {
+        localStorage.setItem("compare_ids", JSON.stringify(compareIds.slice(0, 3)));
+    } catch (e) {}
+    refreshCompareBar();
+}
+
+function toggleCompare(id) {
+    const sid = String(id);
+    if (compareIds.includes(sid)) {
+        compareIds = compareIds.filter(x => x !== sid);
+        saveCompare();
+        rerender();
+        return;
+    }
+    if (compareIds.length >= 3) {
+        alert("Bạn chỉ có thể so sánh tối đa 3 dịch vụ.");
+        return;
+    }
+    compareIds.push(sid);
+    saveCompare();
+    rerender();
+}
+
+function refreshCompareBar() {
+    const bar = document.getElementById("compareBar");
+    const names = document.getElementById("compareNames");
+    if (!compareIds.length) {
+        bar.style.display = "none";
+        return;
+    }
+    const picked = cacheServices.filter(s => compareIds.includes(String(s.id)));
+    names.innerText = picked.map(s => s.name).join(" • ");
+    bar.style.display = "";
+}
+
+function clearCompare() {
+    compareIds = [];
+    saveCompare();
+    rerender();
+}
+
+function openCompare() {
+    const picked = cacheServices.filter(s => compareIds.includes(String(s.id)));
+    if (picked.length < 2) {
+        alert("Vui lòng chọn ít nhất 2 dịch vụ để so sánh.");
+        return;
+    }
+    renderCompareModal(picked);
+    showCompare();
+}
+
+function showCompare() {
+    const overlay = document.getElementById("cmpOverlay");
+    overlay.style.display = "flex";
+    document.body.style.overflow = "hidden";
+}
+
+function closeCompare() {
+    const overlay = document.getElementById("cmpOverlay");
+    overlay.style.display = "none";
+    document.body.style.overflow = "";
+}
+
+function onOverlayClick(e) {
+    if (e.target && e.target.id === "cmpOverlay") closeCompare();
+}
+
+function textOrDash(v) {
+    const t = String(v ?? "").trim();
+    return t ? t : "—";
+}
+
+function renderCompareModal(picked) {
+    const wrap = document.getElementById("cmpTable");
+    const max = 3;
+    const cols = picked.slice(0, max);
+
+    const rows = [
+        { key: "Dịch vụ", get: (s) => `
+            <div class="cmp-service">
+                <img class="cmp-thumb" src="${(s.image && String(s.image).trim()) ? String(s.image).trim() : `https://picsum.photos/seed/${encodeURIComponent("cmp-" + (s.id || "x"))}/600/400`}" alt="${textOrDash(s.name)}">
+                <div>
+                    <div class="cmp-name">${textOrDash(s.name)}</div>
+                    <div class="muted" style="margin-top:2px;">${textOrDash(s.category)}</div>
+                </div>
+            </div>
+        ` },
+        { key: "Giá", get: (s) => `<b style="color:#0b2c6b;">${formatMoney(s.price)}</b>` },
+        { key: "Mở cửa", get: (s) => textOrDash(s.open_time) },
+        { key: "Hotline", get: (s) => textOrDash(s.phone) },
+        { key: "Địa điểm", get: (s) => textOrDash(s.location) },
+        { key: "Vị trí", get: (s) => textOrDash(s.position) },
+        { key: "Số giờ sử dụng", get: (s) => textOrDash(s.usage_hours) },
+        { key: "Tiện ích", get: (s) => textOrDash(s.amenities) },
+        { key: "Mô tả", get: (s) => textOrDash(s.description) }
+    ];
+
+    const headerCols = cols.map(s => `<div class="cmp-cell">${rows[0].get(s)}</div>`).join("");
+    const header = `<div class="cmp-grid">
+        <div class="cmp-cell key">${rows[0].key}</div>
+        ${headerCols}
+    </div>`;
+
+    const body = rows.slice(1).map(r => {
+        const cells = cols.map(s => `<div class="cmp-cell">${r.get(s)}</div>`).join("");
+        return `<div class="cmp-grid" style="margin-top:10px;">
+            <div class="cmp-cell key">${r.key}</div>
+            ${cells}
+        </div>`;
+    }).join("");
+
+    wrap.innerHTML = header + body;
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeCompare();
+});
+
+function renderList(keyword = "") {
+    const list = document.getElementById("list");
+    const emptyState = document.getElementById("emptyState");
+    list.innerHTML = "";
+
+    const kw = keyword.toLowerCase().trim();
+    const filtered = cacheServices
+        .filter(s => s.category === type)
+        .filter(s => (s.name || "").toLowerCase().includes(kw))
+        .filter(s => {
+            const p = Number(s.price || 0);
+            if (advFilter.min != null && p < advFilter.min) return false;
+            if (advFilter.max != null && p > advFilter.max) return false;
+            return true;
+        });
+
+    const sortBy = getSelectedSort();
+    if (sortBy === "price_asc") filtered.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    if (sortBy === "price_desc") filtered.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    if (sortBy === "name_asc") filtered.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "vi"));
+
+    if (!filtered.length) {
+        emptyState.style.display = "block";
+        return;
+    }
+
+    emptyState.style.display = "none";
+
+    filtered.forEach(s => {
+        const adult = Number(s.price || 0);
+        const child = adult * 0.5;
+        const infant = adult * 0.2;
+        const isRestaurant = s.category === "restaurant";
+        const inCompare = compareIds.includes(String(s.id));
+
+        const div = document.createElement("article");
+        div.className = "service-card";
+        div.innerHTML = `
+            <img src="${s.image || 'https://via.placeholder.com/500x280'}" alt="${s.name}">
+            <div class="service-info">
+                <h3>${s.name}</h3>
+                <div class="price-box">
+                    <div class="price-item">
+                        <span>Người lớn</span>
+                        <strong>${formatMoney(adult)}</strong>
+                    </div>
+                    <div class="price-item">
+                        <span>Trẻ em</span>
+                        <strong>${formatMoney(child)}</strong>
+                    </div>
+                    <div class="price-item">
+                        <span>Em bé</span>
+                        <strong>${formatMoney(infant)}</strong>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-outline" data-id="${s.id}" data-action="detail">Chi tiết</button>
+                    <button class="btn-primary" data-id="${s.id}" data-action="book">${isRestaurant ? "Đặt bàn" : "Đặt ngay"}</button>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                    <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:#2f395a;cursor:pointer;user-select:none;">
+                        <input type="checkbox" data-action="compare" data-id="${s.id}" ${inCompare ? "checked" : ""}>
+                        Thêm vào so sánh
+                    </label>
+                    <span class="muted">${inCompare ? "Đã chọn" : ""}</span>
+                </div>
+            </div>
+        `;
+
+        div.querySelector("[data-action='detail']").onclick = () => {
+            window.location.href = "/detail?id=" + s.id;
+        };
+
+        const bookBtn = div.querySelector("[data-action='book']");
+        if (bookBtn) {
+            bookBtn.onclick = () => {
+                localStorage.setItem("service_id", s.id);
+                window.location.href = "/booking";
+            };
+        }
+
+        const compareBox = div.querySelector("[data-action='compare']");
+        if (compareBox) {
+            compareBox.onchange = () => toggleCompare(s.id);
+        }
+
+        list.appendChild(div);
+    });
+}
+
+fetch(API + "/service/list")
+.then(res => res.json())
+.then(data => {
+    cacheServices = data || [];
+    loadCompare();
+    renderList();
+
+    // Log category view for personalization
+    try {
+        fetch("/activity/log", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ event_type: "view_category", category: type })
+        });
+    } catch (e) {}
+});
+
+document.getElementById("search").addEventListener("input", (e) => {
+    renderList(e.target.value || "");
+});
+</script>
+
+</body>
+</html>

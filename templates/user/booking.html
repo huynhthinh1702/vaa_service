@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Đặt phòng chờ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .booking-layout {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px 30px;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: #fff;
+            border: 1px solid #e6e9f5;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .panel h3 {
+            margin: 0 0 12px;
+            color: #0b2c6b;
+        }
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #c8d1eb;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .muted {
+            color: #667;
+            font-size: 13px;
+        }
+        .policy-box {
+            background: #f8f9ff;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+        }
+        .counter-card {
+            border: 1px solid #e6e9f5;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .counter-controls button {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid #b7c5ef;
+            background: #fff;
+            color: #0b2c6b;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .counter-value {
+            min-width: 24px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+        .invoice-preview {
+            background: #fbfcff;
+            border: 1px dashed #b7c5ef;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .main-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        @media (max-width: 980px) {
+            .booking-layout {
+                grid-template-columns: 1fr;
+            }
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="logo">VAA</div>
+    <nav><a href="/user">Trang chủ</a> <a href="/history">Lịch sử</a></nav>
+</header>
+
+<div class="booking-layout">
+    <section>
+        <h2 id="pageTitle">Đặt phòng chờ</h2>
+
+        <div class="panel">
+            <h3>Thông tin phòng chờ</h3>
+            <div id="serviceInfo"></div>
+        </div>
+
+        <div class="panel">
+            <h3>Thông tin người mua</h3>
+            <div class="form-group">
+                <label>Họ và tên *</label>
+                <input id="buyerName" placeholder="Nhập họ và tên">
+            </div>
+            <div class="field-row">
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input id="buyerEmail" type="email" placeholder="Nhập email">
+                </div>
+                <div class="form-group">
+                    <label>Số điện thoại *</label>
+                    <input id="buyerPhone" placeholder="Nhập số điện thoại">
+                </div>
+            </div>
+            <div class="muted">Thông tin người mua sẽ được tự động điền nếu bạn đã đăng nhập tài khoản.</div>
+        </div>
+
+        <div class="panel">
+            <h3 id="guestPanelTitle">Thông tin người sử dụng dịch vụ</h3>
+            <div class="field-row" style="margin-bottom:10px;">
+                <div class="form-group">
+                    <label id="serviceDateLabel">Ngày sử dụng *</label>
+                    <input id="serviceDate" type="date">
+                </div>
+                <div class="form-group">
+                    <label id="serviceTimeLabel" style="display:none;">Giờ đặt bàn *</label>
+                    <input id="reservedTime" type="time" style="display:none;">
+
+                    <label id="flightNumberLabel">Số hiệu chuyến bay</label>
+                    <input id="flightNumber" placeholder="VD: VN123">
+                </div>
+            </div>
+            <label>
+                <input type="checkbox" id="useBuyerInfo"> Điền theo thông tin người mua
+            </label>
+            <div class="field-row" style="margin-top:10px;">
+                <div class="form-group">
+                    <label>Họ và tên *</label>
+                    <input id="userName" placeholder="Nhập họ và tên">
+                </div>
+                <div class="form-group">
+                    <label>Ngày sinh *</label>
+                    <input id="userDob" type="date">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Email nhận vé điện tử *</label>
+                <input id="ticketEmail" type="email" placeholder="Nhập email nhận vé">
+            </div>
+            <div class="muted">Hóa đơn điện tử sẽ gửi về email này sau khi thanh toán thành công.</div>
+        </div>
+
+        <div class="panel">
+            <h3>Chính sách</h3>
+            <div class="policy-box">
+                <div id="policyText">
+                    - Vé đã thanh toán không hoàn hủy trong vòng 24h trước giờ sử dụng.<br>
+                    - Người dùng cần nhập đúng thông tin để nhận vé điện tử và hóa đơn.<br>
+                    - Nghiêm cấm spam thanh toán, hệ thống sẽ giới hạn tần suất đặt chỗ.
+                </div>
+            </div>
+            <label style="display:block; margin-top:10px;">
+                <input type="checkbox" id="agreePolicy"> Tôi đồng ý với chính sách đặt chỗ
+            </label>
+        </div>
+    </section>
+
+    <aside>
+        <div class="panel" id="paxPanel">
+            <h3 id="paxTitle">Số lượng khách *</h3>
+            <div id="paxLoungeBox">
+                <div class="counter-card">
+                    <div>
+                        <strong>Người lớn</strong><br>
+                        <span class="muted">Từ 12 tuổi</span>
+                    </div>
+                    <div class="counter-controls">
+                        <button onclick="changeQty('adult', -1)">-</button>
+                        <span class="counter-value" id="qtyAdult">1</span>
+                        <button onclick="changeQty('adult', 1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-card">
+                    <div>
+                        <strong>Trẻ em</strong><br>
+                        <span class="muted">5 - 12 tuổi</span>
+                    </div>
+                    <div class="counter-controls">
+                        <button onclick="changeQty('child', -1)">-</button>
+                        <span class="counter-value" id="qtyChild">0</span>
+                        <button onclick="changeQty('child', 1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-card">
+                    <div>
+                        <strong>Em bé</strong><br>
+                        <span class="muted">Dưới 5 tuổi</span>
+                    </div>
+                    <div class="counter-controls">
+                        <button onclick="changeQty('infant', -1)">-</button>
+                        <span class="counter-value" id="qtyInfant">0</span>
+                        <button onclick="changeQty('infant', 1)">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="paxRestaurantBox" style="display:none;">
+                <div class="counter-card">
+                    <div>
+                        <strong>Số người</strong><br>
+                        <span class="muted">Tối thiểu 1 người</span>
+                    </div>
+                    <div class="counter-controls">
+                        <button onclick="changePax(-1)">-</button>
+                        <span class="counter-value" id="qtyPax">2</span>
+                        <button onclick="changePax(1)">+</button>
+                    </div>
+                </div>
+                <div class="muted">Bạn có thể ghi yêu cầu bàn/ghế trẻ em ở phần ghi chú.</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Thanh toán</h3>
+            <label>
+                <input type="checkbox" id="humanCheck">
+                Tôi không phải robot (chặn spam thanh toán)
+            </label>
+            <div class="summary-row"><span>Tạm tính trước thuế</span><strong id="subTotal">0 VND</strong></div>
+            <div class="summary-row"><span>Thuế VAT (10%)</span><strong id="taxAmount">0 VND</strong></div>
+            <div class="summary-row"><span>Thành tiền</span><strong id="totalPrice">0 VND</strong></div>
+            <button id="submitBtn" class="main-btn" onclick="submitBooking()">Đặt ngay</button>
+            <button id="invoiceBtn" class="main-btn" onclick="downloadInvoice()" style="margin-top:8px;background:#2e55c7;">
+                Tải hóa đơn điện tử
+            </button>
+            <div class="invoice-preview" id="invoicePreview">Hóa đơn điện tử sẽ hiển thị tại đây sau khi nhập đủ thông tin.</div>
+        </div>
+    </aside>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+let currentService = null;
+let currentUser = null;
+let qty = { adult: 1, child: 0, infant: 0 };
+let restaurantPax = 2;
+let lastSubmitAt = 0;
+
+function formatMoney(num) {
+    return new Intl.NumberFormat("vi-VN").format(Math.round(num || 0)) + " VND";
+}
+
+function getTotalTicket() {
+    return qty.adult + qty.child + qty.infant;
+}
+
+function getSubTotal() {
+    if (!currentService) return 0;
+    if (currentService.category === "restaurant") {
+        const unit = Number(currentService.price || 0);
+        return restaurantPax * unit;
+    }
+    const adultPrice = currentService.price;
+    const childPrice = currentService.price * 0.7;
+    const infantPrice = currentService.price * 0.2;
+    return qty.adult * adultPrice + qty.child * childPrice + qty.infant * infantPrice;
+}
+
+function updateInvoicePreview() {
+    const buyerName = document.getElementById("buyerName").value.trim();
+    const buyerEmail = document.getElementById("buyerEmail").value.trim();
+    const serviceName = currentService ? currentService.name : "(chưa chọn dịch vụ)";
+    const subtotal = getSubTotal();
+    const vat = subtotal * 0.1;
+    const total = subtotal + vat;
+    const isRestaurant = currentService && currentService.category === "restaurant";
+    const serviceDate = document.getElementById("serviceDate").value;
+    const reservedTime = document.getElementById("reservedTime").value;
+
+    const invoiceContent = [
+        "HOA DON DIEN TU",
+        "Dich vu: " + serviceName,
+        "Nguoi mua: " + (buyerName || "(chua nhap)"),
+        "Email nhan hoa don: " + (buyerEmail || "(chua nhap)"),
+        isRestaurant
+            ? ("Dat ban: " + (serviceDate || "(chua chon ngay)") + " " + (reservedTime || "(chua chon gio)") + " | So nguoi: " + restaurantPax)
+            : ("So luong - Nguoi lon: " + qty.adult + ", Tre em: " + qty.child + ", Em be: " + qty.infant),
+        "Tam tinh: " + formatMoney(subtotal),
+        "VAT 10%: " + formatMoney(vat),
+        "Tong thanh toan: " + formatMoney(total),
+        "Ngay tao: " + new Date().toLocaleString("vi-VN")
+    ].join("\n");
+
+    document.getElementById("invoicePreview").innerText = invoiceContent;
+}
+
+function updateTotal() {
+    const subtotal = getSubTotal();
+    const vat = subtotal * 0.1;
+    const total = subtotal + vat;
+    document.getElementById("subTotal").innerText = formatMoney(subtotal);
+    document.getElementById("taxAmount").innerText = formatMoney(vat);
+    document.getElementById("totalPrice").innerText = formatMoney(total);
+    updateInvoicePreview();
+}
+
+function renderQty() {
+    document.getElementById("qtyAdult").innerText = qty.adult;
+    document.getElementById("qtyChild").innerText = qty.child;
+    document.getElementById("qtyInfant").innerText = qty.infant;
+    updateTotal();
+}
+
+function changeQty(type, delta) {
+    const nextValue = qty[type] + delta;
+    if (nextValue < 0) return;
+    if (type === "adult" && nextValue < 1) return;
+    qty[type] = nextValue;
+    renderQty();
+}
+
+function renderPax() {
+    document.getElementById("qtyPax").innerText = String(restaurantPax);
+    updateTotal();
+}
+
+function changePax(delta) {
+    const next = restaurantPax + delta;
+    if (next < 1) return;
+    restaurantPax = next;
+    renderPax();
+}
+
+function applyBuyerToUser() {
+    const checked = document.getElementById("useBuyerInfo").checked;
+    if (!checked) return;
+    document.getElementById("userName").value = document.getElementById("buyerName").value;
+    document.getElementById("ticketEmail").value = document.getElementById("buyerEmail").value;
+}
+
+function loadService() {
+    const id = localStorage.getItem("service_id");
+    fetch(API + "/service/list")
+        .then(res => res.json())
+        .then(data => {
+            const s = data.find(x => String(x.id) === String(id));
+            if (!s) {
+                alert("Không tìm thấy dịch vụ.");
+                window.location.href = "/user";
+                return;
+            }
+            currentService = s;
+            const isRestaurant = s.category === "restaurant";
+
+            document.getElementById("pageTitle").innerText = isRestaurant ? "Đặt bàn nhà hàng & cà phê" : "Đặt phòng chờ";
+            document.getElementById("submitBtn").innerText = isRestaurant ? "Xác nhận đặt bàn" : "Đặt ngay";
+            document.getElementById("guestPanelTitle").innerText = isRestaurant ? "Thông tin đặt bàn" : "Thông tin người sử dụng dịch vụ";
+            document.getElementById("serviceDateLabel").innerText = isRestaurant ? "Ngày đặt bàn *" : "Ngày sử dụng *";
+
+            document.getElementById("serviceTimeLabel").style.display = isRestaurant ? "block" : "none";
+            document.getElementById("reservedTime").style.display = isRestaurant ? "block" : "none";
+            document.getElementById("flightNumberLabel").style.display = isRestaurant ? "none" : "block";
+            document.getElementById("flightNumber").style.display = isRestaurant ? "none" : "block";
+
+            document.getElementById("paxLoungeBox").style.display = isRestaurant ? "none" : "block";
+            document.getElementById("paxRestaurantBox").style.display = isRestaurant ? "block" : "none";
+
+            if (isRestaurant) {
+                document.getElementById("policyText").innerHTML =
+                    "- Vui lòng đến đúng giờ đã đặt để được giữ bàn.<br>" +
+                    "- Trường hợp thay đổi/huỷ, vui lòng liên hệ hotline nhà hàng.<br>" +
+                    "- Hệ thống có thể giới hạn tần suất đặt bàn để chống spam.";
+            }
+
+            document.getElementById("serviceInfo").innerHTML = `
+                <b>Dịch vụ:</b> ${s.name}<br>
+                <b>${isRestaurant ? "Giá tham khảo / suất:" : "Giá người lớn:"}</b> ${formatMoney(s.price)}<br>
+                <span class="muted">${isRestaurant ? "Giá dùng để ước tính chi phí theo số người (có thể thay đổi theo món)." : "Giá trẻ em: 70%, em bé: 20% giá người lớn."}</span>
+            `;
+            updateTotal();
+            if (isRestaurant) renderPax();
+        });
+}
+
+function loadUserProfile() {
+    return fetch("/auth/me")
+        .then(res => res.json())
+        .then(me => {
+            if (!me.user) {
+                alert("Bạn chưa đăng nhập!");
+                window.location.href = "/login";
+                throw new Error("Not logged in");
+            }
+            currentUser = me;
+            const fullName = me.fullname || me.user || "";
+            const email = me.email || "";
+            document.getElementById("buyerName").value = fullName;
+            document.getElementById("buyerEmail").value = email;
+            if (me.dob) {
+                document.getElementById("userDob").value = me.dob;
+            }
+            applyBuyerToUser();
+            updateInvoicePreview();
+        });
+}
+
+function validateForm() {
+    const buyerName = document.getElementById("buyerName").value.trim();
+    const buyerEmail = document.getElementById("buyerEmail").value.trim();
+    const buyerPhone = document.getElementById("buyerPhone").value.trim();
+    const userName = document.getElementById("userName").value.trim();
+    const userDob = document.getElementById("userDob").value;
+    const ticketEmail = document.getElementById("ticketEmail").value.trim();
+    const serviceDate = document.getElementById("serviceDate").value;
+    const reservedTime = document.getElementById("reservedTime").value;
+    const agreePolicy = document.getElementById("agreePolicy").checked;
+    const humanCheck = document.getElementById("humanCheck").checked;
+
+    if (!buyerName || !buyerEmail || !buyerPhone || !userName || !userDob || !ticketEmail || !serviceDate) {
+        alert("Vui lòng nhập đầy đủ thông tin người mua và người sử dụng.");
+        return false;
+    }
+    if (currentService && currentService.category === "restaurant") {
+        if (!reservedTime) {
+            alert("Vui lòng chọn giờ đặt bàn.");
+            return false;
+        }
+        if (restaurantPax <= 0) {
+            alert("Vui lòng chọn số lượng khách.");
+            return false;
+        }
+    } else {
+        if (getTotalTicket() <= 0) {
+            alert("Vui lòng chọn số lượng khách.");
+            return false;
+        }
+    }
+    if (!agreePolicy) {
+        alert("Bạn cần đồng ý chính sách trước khi đặt.");
+        return false;
+    }
+    if (!humanCheck) {
+        alert("Vui lòng xác nhận chống spam thanh toán.");
+        return false;
+    }
+    return true;
+}
+
+function downloadInvoice() {
+    updateInvoicePreview();
+    const content = document.getElementById("invoicePreview").innerText;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "hoa-don-dien-tu.txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+function sendInvoiceMail() {
+    const ticketEmail = document.getElementById("ticketEmail").value.trim();
+    const content = encodeURIComponent(document.getElementById("invoicePreview").innerText);
+    const subject = encodeURIComponent("Hoa don dien tu dat phong cho");
+    const mailto = "mailto:" + ticketEmail + "?subject=" + subject + "&body=" + content;
+    window.open(mailto, "_blank");
+}
+
+function submitBooking() {
+    if (!validateForm()) return;
+
+    const now = Date.now();
+    if (now - lastSubmitAt < 8000) {
+        alert("Bạn thao tác quá nhanh. Vui lòng chờ vài giây để tránh spam thanh toán.");
+        return;
+    }
+    lastSubmitAt = now;
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerText = "Đang xử lý thanh toán...";
+
+    const serviceId = localStorage.getItem("service_id");
+    const isRestaurant = currentService && currentService.category === "restaurant";
+
+    if (isRestaurant) {
+        btn.innerText = "Đang giữ chỗ...";
+        const payload = {
+            service_id: Number(serviceId),
+            reserved_date: document.getElementById("serviceDate").value,
+            reserved_time: document.getElementById("reservedTime").value,
+            pax: restaurantPax,
+            contact_name: document.getElementById("buyerName").value.trim(),
+            contact_phone: document.getElementById("buyerPhone").value.trim(),
+            note: ""
+        };
+
+        fetch(API + "/reservation/add", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Đặt bàn thất bại.");
+            return data;
+        })
+        .then(resv => {
+            updateInvoicePreview();
+            const subtotal = getSubTotal();
+            const vat = subtotal * 0.1;
+            const total = subtotal + vat;
+            const orderPayload = {
+                serviceCategory: "restaurant",
+                serviceId: Number(serviceId),
+                serviceName: currentService.name,
+                servicePrice: Number(currentService.price || 0),
+                buyer: {
+                    name: document.getElementById("buyerName").value.trim(),
+                    email: document.getElementById("buyerEmail").value.trim(),
+                    phone: document.getElementById("buyerPhone").value.trim()
+                },
+                reservation: {
+                    id: resv.id,
+                    date: document.getElementById("serviceDate").value,
+                    time: document.getElementById("reservedTime").value,
+                    pax: restaurantPax
+                },
+                subtotal,
+                vat,
+                total
+            };
+            try {
+                sessionStorage.setItem("orderConfirmData", JSON.stringify(orderPayload));
+            } catch (e) {}
+            window.location.href = "/order-confirm";
+        })
+        .catch((e) => {
+            alert(e.message || "Có lỗi khi đặt bàn, vui lòng thử lại.");
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = "Xác nhận đặt bàn";
+        });
+        return;
+    }
+
+    const name = document.getElementById("userName").value.trim();
+    const phone = document.getElementById("buyerPhone").value.trim();
+    const quantity = getTotalTicket();
+
+    fetch(API + "/passenger/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: name,
+            phone: phone,
+            username: currentUser ? currentUser.user : null,
+            flight_id: 1,
+            ticket_class: "Eco",
+            checkin_status: "Not Checked"
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const passengerId = data.id;
+        return fetch(API + "/booking/add", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                passenger_id: passengerId,
+                service_id: serviceId,
+                quantity: quantity
+            })
+        }).then(res => res.json()).then(bookingRes => ({ passengerId, bookingRes }));
+    })
+    .then(({ passengerId, bookingRes }) => {
+        if (!passengerId) {
+            alert("Không tạo được thông tin khách. Vui lòng thử lại.");
+            return;
+        }
+        if (!bookingRes || bookingRes.message !== "Booked successfully") {
+            alert((bookingRes && bookingRes.message) || "Đặt chỗ thất bại.");
+            return;
+        }
+        updateInvoicePreview();
+        const subtotal = getSubTotal();
+        const vat = subtotal * 0.1;
+        const total = subtotal + vat;
+        const flightNumber = (document.getElementById("flightNumber").value || "").trim();
+        const serviceDate = document.getElementById("serviceDate").value;
+        const orderPayload = {
+            serviceId: Number(serviceId),
+            serviceName: currentService.name,
+            servicePrice: Number(currentService.price || 0),
+            openTime: currentService.open_time || "24/7",
+            location: "Khu cách ly Ga đi Quốc tế, Sân bay Quốc tế Tân Sơn Nhất, TP.HCM",
+            position: "Tầng 2, gần cửa khởi hành số 10-14",
+            durationText: "Tối đa 4 giờ liên tục",
+            buyer: {
+                name: document.getElementById("buyerName").value.trim(),
+                email: document.getElementById("buyerEmail").value.trim(),
+                phone: document.getElementById("buyerPhone").value.trim()
+            },
+            guest: {
+                name: document.getElementById("userName").value.trim(),
+                dob: document.getElementById("userDob").value,
+                ticketEmail: document.getElementById("ticketEmail").value.trim(),
+                flightNumber: flightNumber || "-",
+                serviceDate: serviceDate
+            },
+            qty: { ...qty },
+            subtotal,
+            vat,
+            total,
+            passengerId,
+            bookingMessage: bookingRes && bookingRes.message ? bookingRes.message : "",
+            invoiceText: document.getElementById("invoicePreview").innerText
+        };
+        try {
+            sessionStorage.setItem("orderConfirmData", JSON.stringify(orderPayload));
+        } catch (e) {
+            console.warn(e);
+        }
+        window.location.href = "/order-confirm";
+    })
+    .catch(() => {
+        alert("Có lỗi khi thanh toán, vui lòng thử lại.");
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerText = "Đặt ngay";
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const sd = document.getElementById("serviceDate");
+    const t = new Date();
+    sd.value = t.toISOString().slice(0, 10);
+    const rt = document.getElementById("reservedTime");
+    if (rt) rt.value = "12:00";
+    loadUserProfile().then(loadService).catch(() => {});
+    renderQty();
+    ["buyerName", "buyerEmail", "buyerPhone", "userName", "userDob", "ticketEmail", "serviceDate", "flightNumber"].forEach(id => {
+        document.getElementById(id).addEventListener("input", () => {
+            applyBuyerToUser();
+            updateInvoicePreview();
+        });
+    });
+    document.getElementById("useBuyerInfo").addEventListener("change", applyBuyerToUser);
+});
+</script>
+</body>
+</html>

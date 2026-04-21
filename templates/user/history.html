@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử đặt chỗ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #eef1f7; color: #1d2746; }
+        .his-wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 40px; }
+        .his-panel {
+            background: #fff;
+            border: 1px solid #dce3f7;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+        .his-title { margin: 8px 0 12px; color: #0b2c6b; font-size: 22px; }
+        .tabs { display: flex; gap: 10px; flex-wrap: wrap; }
+        .tab {
+            border: 1px solid #2148bf;
+            background: #fff;
+            color: #2148bf;
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .tab.active {
+            background: #2148bf;
+            color: #fff;
+        }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 14px; }
+        .card {
+            background: #fff;
+            border: 1px solid #e1e8fb;
+            border-radius: 14px;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 96px 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+        .thumb {
+            width: 96px;
+            height: 96px;
+            border-radius: 14px;
+            object-fit: cover;
+            border: 1px solid #dce3f7;
+            background: #f3f6ff;
+        }
+        .name { font-weight: 900; color: #0b2c6b; line-height: 1.25; }
+        .meta { margin-top: 8px; font-size: 13px; color: #2f395a; line-height: 1.6; }
+        .muted { color: #667; font-size: 13px; }
+        .pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #f1f5ff;
+            border: 1px solid #dbe6ff;
+            color: #0b2c6b;
+            font-weight: 800;
+            font-family: system-ui;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .actions { display:flex; gap:8px; margin-top: 10px; flex-wrap: wrap; }
+        .btn {
+            border-radius: 12px;
+            border: 1px solid #2148bf;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-family: system-ui;
+            font-weight: 800;
+            font-size: 12.5px;
+        }
+        .btn.primary { background: #2148bf; color: #fff; }
+        .btn.outline { background: #fff; color: #2148bf; }
+        .empty {
+            text-align: center;
+            color: #44527a;
+            background: #fff;
+            border: 1px dashed #c7d4f5;
+            border-radius: 14px;
+            padding: 16px;
+            margin-top: 14px;
+        }
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="logo">VAA</div>
+    <nav>
+        <a href="/user">Trang chủ</a>
+        <a href="/category?type=restaurant">Nhà hàng</a>
+        <a href="/category?type=lounge">Phòng chờ</a>
+        <a href="/category?type=sleep">Khu ngủ</a>
+    </nav>
+</header>
+
+<div class="his-wrap">
+    <div class="his-panel">
+        <div class="his-title">Lịch sử đặt chỗ</div>
+        <div class="muted">Hiển thị theo tài khoản đang đăng nhập.</div>
+        <div class="tabs" style="margin-top:12px;">
+            <button class="tab active" id="tabAll" onclick="setTab('all')">Tất cả</button>
+            <button class="tab" id="tabRes" onclick="setTab('reservation')">Đặt bàn</button>
+            <button class="tab" id="tabBook" onclick="setTab('booking')">Đặt dịch vụ</button>
+        </div>
+    </div>
+
+    <div id="empty" class="empty" style="display:none;">Chưa có lịch sử. Hãy đặt dịch vụ hoặc đặt bàn để hệ thống lưu lại.</div>
+    <div class="grid" id="grid"></div>
+</div>
+
+<script>
+function formatMoney(value) {
+    return new Intl.NumberFormat("vi-VN").format(Math.round(Number(value) || 0)) + " VND";
+}
+
+function formatDateTime(text) {
+    const t = String(text || "").trim();
+    if (!t) return "—";
+    return t.replace("T", " ").slice(0, 19);
+}
+
+let currentTab = "all";
+let state = { reservations: [], bookings: [] };
+
+function setTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    if (tab === "all") document.getElementById("tabAll").classList.add("active");
+    if (tab === "reservation") document.getElementById("tabRes").classList.add("active");
+    if (tab === "booking") document.getElementById("tabBook").classList.add("active");
+    render();
+}
+
+function getThumb(item) {
+    const url = item.service_image && String(item.service_image).trim() ? String(item.service_image).trim() : "";
+    if (url) return url;
+    const seed = (item.service_id || item.serviceId || item.booking_id || item.id || "x");
+    return `https://picsum.photos/seed/${encodeURIComponent("his-" + seed)}/600/400`;
+}
+
+function render() {
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    grid.innerHTML = "";
+
+    const items = [];
+    state.reservations.forEach(r => items.push({ type: "reservation", created_at: r.created_at, data: r }));
+    state.bookings.forEach(b => items.push({ type: "booking", created_at: b.created_at, data: b }));
+    items.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+
+    const filtered = items.filter(x => {
+        if (currentTab === "all") return true;
+        if (currentTab === "reservation") return x.type === "reservation";
+        if (currentTab === "booking") return x.type === "booking";
+        return true;
+    });
+
+    if (!filtered.length) {
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+
+    filtered.forEach(x => {
+        const d = x.data;
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const name = d.service_name || "Dịch vụ";
+        const created = formatDateTime(d.created_at);
+        const thumb = getThumb(d);
+
+        let pill = "";
+        let meta = "";
+        let actions = "";
+
+        if (x.type === "reservation") {
+            pill = `<span class="pill">Đặt bàn</span>`;
+            meta = `
+                <div class="meta">
+                    <div><b>Ngày:</b> ${d.reserved_date || "—"} • <b>Giờ:</b> ${d.reserved_time || "—"}</div>
+                    <div><b>Số người:</b> ${d.pax ?? "—"}</div>
+                    <div><b>Liên hệ:</b> ${d.contact_name || "—"} • ${d.contact_phone || "—"}</div>
+                    <div class="muted"><b>Thời gian tạo:</b> ${created}</div>
+                </div>
+            `;
+            actions = `
+                <div class="actions">
+                    <button class="btn outline" onclick="goDetail(${Number(d.service_id)})">Xem dịch vụ</button>
+                    <button class="btn primary" onclick="bookAgain(${Number(d.service_id)})">Đặt lại</button>
+                </div>
+            `;
+        } else {
+            pill = `<span class="pill">Đặt dịch vụ</span>`;
+            meta = `
+                <div class="meta">
+                    <div><b>Số lượng:</b> ${d.quantity ?? "—"} • <b>Tạm tính:</b> ${formatMoney(d.total_price)}</div>
+                    <div><b>Thanh toán:</b> ${d.payment_status || "—"}</div>
+                    <div class="muted"><b>Thời gian tạo:</b> ${created}</div>
+                </div>
+            `;
+            actions = `
+                <div class="actions">
+                    <button class="btn outline" onclick="goDetail(${Number(d.service_id)})">Xem dịch vụ</button>
+                    <button class="btn primary" onclick="bookAgain(${Number(d.service_id)})">Đặt lại</button>
+                </div>
+            `;
+        }
+
+        card.innerHTML = `
+            <img class="thumb" src="${thumb}" alt="${name}">
+            <div>
+                <div class="name">${name}</div>
+                ${pill}
+                ${meta}
+                ${actions}
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function goDetail(id) {
+    window.location.href = "/detail?id=" + id;
+}
+
+function bookAgain(id) {
+    localStorage.setItem("service_id", String(id));
+    window.location.href = "/booking";
+}
+
+function loadHistory() {
+    fetch("/history/data")
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Không tải được lịch sử.");
+            return data;
+        })
+        .then(data => {
+            state.reservations = data.reservations || [];
+            state.bookings = data.bookings || [];
+            render();
+        })
+        .catch((e) => {
+            alert((e && e.message) ? e.message : "Vui lòng đăng nhập để xem lịch sử.");
+            window.location.href = "/login";
+        });
+}
+
+document.addEventListener("DOMContentLoaded", loadHistory);
+</script>
+</body>
+</html>
+
