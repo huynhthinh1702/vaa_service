@@ -202,7 +202,7 @@
                     <input type="checkbox" id="remember" checked>
                     <span>Duy trì đăng nhập</span>
                 </label>
-                <a href="#" class="forgot">Quên mật khẩu?</a>
+                <a href="/forgot-password" class="forgot">Quên mật khẩu?</a>
             </div>
 
             <button class="submit-btn" onclick="login()">Đăng nhập</button>
@@ -268,6 +268,8 @@ function login() {
                 });
             }, 1000);
 
+        } else if (data.message === "Account inactive") {
+            showPopup("Tài khoản đang bị vô hiệu hoá!");
         } else {
             showPopup("Sai tài khoản!");
         }

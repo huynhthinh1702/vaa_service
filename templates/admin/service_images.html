@@ -1,0 +1,73 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="card">
+    <h2 style="margin-top:0;">Quản lý hình ảnh dịch vụ</h2>
+    <div class="page-subtitle">Chọn dịch vụ để upload và quản lý ảnh minh hoạ.</div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 12px;">
+        <select id="categoryFilter">
+            <option value="">Tất cả category</option>
+            <option value="lounge">lounge</option>
+            <option value="sleep">sleep</option>
+            <option value="restaurant">restaurant</option>
+        </select>
+        <input id="q" placeholder="Tìm theo tên dịch vụ..." style="min-width: 260px;">
+        <button onclick="load()">Search</button>
+        <button class="secondary" onclick="resetFilters()">Reset</button>
+    </div>
+</div>
+
+<div class="grid cols-3" id="grid"></div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+
+function esc(text) {
+    return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function resetFilters() {
+    document.getElementById("categoryFilter").value = "";
+    document.getElementById("q").value = "";
+    load();
+}
+
+function load() {
+    const category = document.getElementById("categoryFilter").value.trim();
+    const q = document.getElementById("q").value.trim().toLowerCase();
+    fetch(API + "/admin/service-images/services")
+        .then(res => res.json())
+        .then(data => {
+            let items = data.items || [];
+            if (category) items = items.filter(x => String(x.category || "").trim() === category);
+            if (q) items = items.filter(x => String(x.name || "").toLowerCase().includes(q));
+
+            const grid = document.getElementById("grid");
+            grid.innerHTML = "";
+            items.forEach(s => {
+                const card = document.createElement("div");
+                card.className = "panel";
+                card.style.cursor = "pointer";
+                card.onclick = () => window.location.href = "/admin/service-images/" + s.id;
+                card.innerHTML = `
+                    <div style="font-weight:800; color:#0b2c6b; margin-bottom:6px;">${esc(s.name)}</div>
+                    <div class="badge">${esc(s.category || "")}</div>
+                    <div style="margin-top:10px; color:#64748b; font-size:12px;">Nhấn để quản lý ảnh</div>
+                `;
+                grid.appendChild(card);
+            });
+        });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    load();
+    document.getElementById("q").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") load();
+    });
+});
+</script>
+
+{% endblock %}
+

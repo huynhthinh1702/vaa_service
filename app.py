@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, session
+from flask import Flask, request, jsonify, render_template, session, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 from datetime import timedelta
@@ -15,6 +15,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
+
+import csv
+from io import StringIO
+from pathlib import Path
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "123456"
@@ -116,6 +121,86 @@ def ensure_restaurant_reservation_schema():
 ensure_user_activity_schema()
 ensure_restaurant_reservation_schema()
 
+def ensure_restaurant_reservation_paid_schema():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(restaurant_reservation)")
+    existing_cols = {row["name"] for row in cursor.fetchall()}
+    if "paid_at" not in existing_cols:
+        cursor.execute("ALTER TABLE restaurant_reservation ADD COLUMN paid_at DATETIME")
+    conn.commit()
+    conn.close()
+
+def ensure_booking_service_schema():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(booking_service)")
+    existing_cols = {row["name"] for row in cursor.fetchall()}
+
+    if "using_date" not in existing_cols:
+        cursor.execute("ALTER TABLE booking_service ADD COLUMN using_date TEXT")
+
+    if "paid_at" not in existing_cols:
+        cursor.execute("ALTER TABLE booking_service ADD COLUMN paid_at DATETIME")
+
+    if "order_code" not in existing_cols:
+        cursor.execute("ALTER TABLE booking_service ADD COLUMN order_code TEXT")
+
+    # Backfill order_code (best-effort)
+    try:
+        cursor.execute("SELECT id, order_code FROM booking_service")
+        rows = cursor.fetchall()
+        for r in rows:
+            if not (r["order_code"] or "").strip():
+                code = f"ORD{int(r['id']):06d}"
+                cursor.execute("UPDATE booking_service SET order_code=? WHERE id=?", (code, r["id"]))
+    except Exception:
+        pass
+
+    conn.commit()
+    conn.close()
+
+def ensure_user_schema():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(user)")
+    existing_cols = {row["name"] for row in cursor.fetchall()}
+
+    if "is_active" not in existing_cols:
+        cursor.execute("ALTER TABLE user ADD COLUMN is_active INTEGER DEFAULT 1")
+
+    try:
+        cursor.execute("UPDATE user SET is_active=1 WHERE is_active IS NULL")
+    except Exception:
+        pass
+
+    conn.commit()
+    conn.close()
+
+def ensure_service_image_schema():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS service_image (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            service_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+ensure_restaurant_reservation_paid_schema()
+ensure_booking_service_schema()
+ensure_user_schema()
+ensure_service_image_schema()
+
+def require_admin():
+    return ('role' in session and session['role'] == 'admin')
+
+UPLOAD_ROOT = Path(app.root_path) / "static" / "uploads" / "services"
+
 # ==============================
 # VIEW ROUTES (RENDER HTML)
 # ==============================
@@ -132,23 +217,50 @@ def home():
 @app.route('/admin')
 def admin():
     print("SESSION:", session)
-    if 'role' not in session or session['role'] != 'admin':
+    if not require_admin():
         return "Không có quyền truy cập!"
-    return render_template("admin/index_admin.html")
+    return render_template("admin/orders.html")
 
 # Quản lý dịch vụ
 @app.route('/admin/service')
 def admin_service():
-    if 'role' not in session or session['role'] != 'admin':
+    if not require_admin():
         return "Không có quyền!"
     return render_template("admin/service.html")
 
 # Dashboard
 @app.route('/admin/dashboard')
 def dashboard():
-    if 'role' not in session or session['role'] != 'admin':
+    if not require_admin():
         return "Không có quyền!"
     return render_template("admin/dashboard.html")
+
+# Orders management (alias of /admin)
+@app.route('/admin/orders')
+def admin_orders():
+    if not require_admin():
+        return "Không có quyền!"
+    return render_template("admin/orders.html")
+
+# Service image management
+@app.route('/admin/service-images')
+def admin_service_images():
+    if not require_admin():
+        return "Không có quyền!"
+    return render_template("admin/service_images.html")
+
+@app.route('/admin/service-images/<int:service_id>')
+def admin_service_images_detail(service_id):
+    if not require_admin():
+        return "Không có quyền!"
+    return render_template("admin/service_images_detail.html", service_id=service_id)
+
+# User management
+@app.route('/admin/users')
+def admin_users_page():
+    if not require_admin():
+        return "Không có quyền!"
+    return render_template("admin/users.html")
 
 # user
 @app.route('/user')
@@ -159,6 +271,10 @@ def user():
 @app.route('/login')
 def login_page():
     return render_template("user/login.html")
+
+@app.route('/forgot-password')
+def forgot_password_page():
+    return render_template("user/forgot_password.html")
 
 # đăng ký
 @app.route('/register')
@@ -460,6 +576,9 @@ def login():
 
     user = cursor.fetchone()
 
+    if user and int((user["is_active"] if "is_active" in user.keys() else 1) or 1) != 1:
+        return jsonify({"message": "Account inactive"})
+
     if user and check_password_hash(user['password'], data['password']):
         session.permanent = remember_me
         session['user'] = user['username']
@@ -504,6 +623,107 @@ def get_me():
 def logout():
     session.clear()
     return jsonify({"message": "Logged out"})
+
+# Forgot password -> reset password (verify by username or email)
+@app.route('/auth/reset-password', methods=['POST'])
+def reset_password():
+    data = request.json or {}
+    identifier = (data.get("identifier") or "").strip()
+    new_password = (data.get("new_password") or "").strip()
+
+    if not identifier or not new_password:
+        return jsonify({"message": "Missing identifier or new_password"}), 400
+    if len(new_password) < 6:
+        return jsonify({"message": "Password too short"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT username, email FROM user WHERE username=? OR email=?",
+        (identifier, identifier)
+    )
+    u = cursor.fetchone()
+    if not u:
+        conn.close()
+        return jsonify({"message": "User not found"}), 404
+
+    hashed = generate_password_hash(new_password)
+    cursor.execute("UPDATE user SET password=? WHERE username=?", (hashed, u["username"]))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Password updated"})
+
+# ==============================
+# ADMIN USER MANAGEMENT (API)
+# ==============================
+
+@app.route('/admin/users/list')
+def admin_users_list():
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, email, fullname, dob, role, COALESCE(is_active, 1) AS is_active FROM user ORDER BY username")
+    items = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify({"items": items})
+
+@app.route('/admin/users/update/<string:username>', methods=['PUT'])
+def admin_users_update(username):
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+    data = request.json or {}
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM user WHERE username=?", (username,))
+    u = cursor.fetchone()
+    if not u:
+        conn.close()
+        return jsonify({"message": "Not found"}), 404
+
+    cursor.execute("""
+        UPDATE user
+        SET email=?, fullname=?, dob=?, role=?, is_active=?
+        WHERE username=?
+    """, (
+        data.get("email"),
+        data.get("fullname"),
+        data.get("dob"),
+        data.get("role") or "user",
+        1 if str(data.get("is_active", "1")) in ("1", "true", "True") else 0,
+        username
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Updated"})
+
+@app.route('/admin/users/toggle/<string:username>', methods=['PUT'])
+def admin_users_toggle(username):
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, COALESCE(is_active, 1) AS is_active FROM user WHERE username=?", (username,))
+    u = cursor.fetchone()
+    if not u:
+        conn.close()
+        return jsonify({"message": "Not found"}), 404
+    next_active = 0 if int(u["is_active"] or 1) == 1 else 1
+    cursor.execute("UPDATE user SET is_active=? WHERE username=?", (next_active, username))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Toggled", "is_active": next_active})
+
+@app.route('/admin/users/delete/<string:username>', methods=['DELETE'])
+def admin_users_delete(username):
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM user WHERE username=?", (username,))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Deleted"})
 
 # reset
 @app.route("/reset")
@@ -662,6 +882,39 @@ def mark_paid(id):
     conn.close()
     return jsonify({"message": "Payment marked as Paid"})
 
+# Mark booking order as paid (sets paid_at and passenger.payment_status)
+@app.route('/order/pay/<int:booking_id>', methods=['PUT'])
+def mark_order_paid(booking_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, passenger_id FROM booking_service WHERE id=?", (booking_id,))
+    bs = cursor.fetchone()
+    if not bs:
+        conn.close()
+        return jsonify({"message": "Order not found"}), 404
+
+    cursor.execute("UPDATE booking_service SET paid_at=CURRENT_TIMESTAMP WHERE id=?", (booking_id,))
+    cursor.execute("UPDATE passenger SET payment_status='Paid' WHERE id=?", (bs["passenger_id"],))
+
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Order paid"})
+
+@app.route('/reservation/pay/<int:reservation_id>', methods=['PUT'])
+def mark_reservation_paid(reservation_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM restaurant_reservation WHERE id=?", (reservation_id,))
+    r = cursor.fetchone()
+    if not r:
+        conn.close()
+        return jsonify({"message": "Reservation not found"}), 404
+    cursor.execute("UPDATE restaurant_reservation SET paid_at=CURRENT_TIMESTAMP WHERE id=?", (reservation_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Reservation paid"})
+
     # ==============================
     # SERVICE ROUTES
     # ==============================
@@ -718,6 +971,102 @@ def get_services():
     conn.close()
     return jsonify(result)
 
+@app.route('/service/<int:service_id>/images')
+def service_images(service_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, filename FROM service_image WHERE service_id=? ORDER BY created_at DESC, id DESC", (service_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    items = []
+    for r in rows:
+        url = f"/static/uploads/services/{service_id}/{r['filename']}"
+        items.append({"id": r["id"], "url": url})
+    return jsonify({"items": items})
+
+@app.route('/admin/service-images/services')
+def admin_service_images_services():
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, category FROM service ORDER BY id DESC")
+    items = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify({"items": items})
+
+@app.route('/admin/service-images/<int:service_id>/list')
+def admin_service_images_list(service_id):
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+    return service_images(service_id)
+
+@app.route('/admin/service-images/<int:service_id>/upload', methods=['POST'])
+def admin_service_images_upload(service_id):
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"message": "No files"}), 400
+
+    service_dir = UPLOAD_ROOT / str(service_id)
+    service_dir.mkdir(parents=True, exist_ok=True)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    saved = 0
+    for f in files:
+        if not f or not f.filename:
+            continue
+        filename = secure_filename(f.filename)
+        if not filename:
+            continue
+        # avoid collisions
+        target = service_dir / filename
+        if target.exists():
+            stem = target.stem
+            suffix = target.suffix
+            filename = f"{stem}-{int(__import__('time').time())}{suffix}"
+            target = service_dir / filename
+
+        f.save(str(target))
+        cursor.execute("INSERT INTO service_image (service_id, filename) VALUES (?, ?)", (service_id, filename))
+        saved += 1
+
+    conn.commit()
+    conn.close()
+    return jsonify({"message": f"Uploaded {saved} file(s)"})
+
+@app.route('/admin/service-images/image/<int:image_id>/delete', methods=['DELETE'])
+def admin_service_images_delete(image_id):
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, service_id, filename FROM service_image WHERE id=?", (image_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"message": "Not found"}), 404
+
+    cursor.execute("DELETE FROM service_image WHERE id=?", (image_id,))
+    conn.commit()
+    conn.close()
+
+    # best-effort delete file
+    try:
+        p = UPLOAD_ROOT / str(row["service_id"]) / str(row["filename"])
+        if p.exists():
+            p.unlink()
+    except Exception:
+        pass
+
+    return jsonify({"message": "Deleted"})
+
 # Xóa dịch vụ
 @app.route('/service/delete/<int:id>', methods=['DELETE'])
 def delete_service(id):
@@ -734,11 +1083,12 @@ def delete_service(id):
 # Đăng ký dịch vụ
 @app.route('/booking/add', methods=['POST'])
 def add_booking():
-    data = request.json
+    data = request.json or {}
 
     passenger_id = int(data.get('passenger_id'))
     service_id = int(data.get('service_id'))
     quantity = int(data.get('quantity'))
+    using_date = (data.get("using_date") or "").strip() or None
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -754,14 +1104,18 @@ def add_booking():
     total_price = price * quantity
 
     cursor.execute("""
-        INSERT INTO booking_service (passenger_id, service_id, quantity, total_price)
-        VALUES (?, ?, ?, ?)
-    """, (passenger_id, service_id, quantity, total_price))
+        INSERT INTO booking_service (passenger_id, service_id, quantity, total_price, using_date, order_code)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (passenger_id, service_id, quantity, total_price, using_date, ""))  # order_code filled right after insert
+
+    booking_id = cursor.lastrowid
+    order_code = f"ORD{int(booking_id):06d}"
+    cursor.execute("UPDATE booking_service SET order_code=? WHERE id=?", (order_code, booking_id))
 
     conn.commit()
     conn.close()
 
-    return jsonify({"message": "Booked successfully"})
+    return jsonify({"message": "Booked successfully", "booking_id": booking_id, "order_code": order_code})
 
 # ==============================
 # BOOKING ROUTES (BUSINESS LOGIC)
@@ -835,6 +1189,250 @@ def revenue_by_date():
     conn.close()
 
     return jsonify(result)
+
+@app.route('/dashboard/top-categories')
+def dashboard_top_categories():
+    """
+    Count usage by service category (paid orders + paid reservations).
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # booking_service (paid_at preferred; fallback payment_status on passenger)
+    cursor.execute("""
+        SELECT s.category AS category, COUNT(*) AS cnt
+        FROM booking_service bs
+        JOIN service s ON s.id = bs.service_id
+        LEFT JOIN passenger p ON p.id = bs.passenger_id
+        WHERE bs.paid_at IS NOT NULL OR LOWER(TRIM(COALESCE(p.payment_status, '')))='paid'
+        GROUP BY s.category
+    """)
+    booking_counts = {str(r["category"] or "").strip(): int(r["cnt"] or 0) for r in cursor.fetchall()}
+
+    cursor.execute("""
+        SELECT s.category AS category, COUNT(*) AS cnt
+        FROM restaurant_reservation rr
+        JOIN service s ON s.id = rr.service_id
+        WHERE rr.paid_at IS NOT NULL
+        GROUP BY s.category
+    """)
+    res_counts = {str(r["category"] or "").strip(): int(r["cnt"] or 0) for r in cursor.fetchall()}
+
+    conn.close()
+
+    def get_total(cat):
+        return int(booking_counts.get(cat, 0)) + int(res_counts.get(cat, 0))
+
+    items = [
+        {"category": "lounge", "count": get_total("lounge")},
+        {"category": "restaurant", "count": get_total("restaurant")},
+        {"category": "sleep", "count": get_total("sleep")}
+    ]
+    items.sort(key=lambda x: x["count"], reverse=True)
+    return jsonify({"items": items})
+
+@app.route('/admin/orders/data')
+def admin_orders_data():
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+
+    category = (request.args.get("category") or "").strip()
+    q = (request.args.get("q") or "").strip().lower()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Booking orders
+    params = []
+    where = []
+    if category:
+        where.append("LOWER(TRIM(s.category)) = ?")
+        params.append(category.lower())
+    if q:
+        where.append("(LOWER(TRIM(p.name)) LIKE ? OR LOWER(TRIM(bs.order_code)) LIKE ? OR CAST(bs.id AS TEXT) LIKE ?)")
+        like = f"%{q}%"
+        params.extend([like, like, like])
+
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+    cursor.execute(f"""
+        SELECT
+            bs.id AS id,
+            bs.order_code AS order_code,
+            'booking' AS order_type,
+            s.category AS category,
+            s.name AS service_name,
+            p.name AS customer_name,
+            p.phone AS customer_phone,
+            bs.quantity AS quantity,
+            bs.total_price AS total_price,
+            bs.using_date AS using_date,
+            bs.paid_at AS paid_at,
+            bs.created_at AS created_at,
+            COALESCE(p.payment_status, 'Unpaid') AS payment_status
+        FROM booking_service bs
+        JOIN passenger p ON p.id = bs.passenger_id
+        LEFT JOIN service s ON s.id = bs.service_id
+        {where_sql}
+        ORDER BY COALESCE(bs.paid_at, bs.created_at) DESC
+        LIMIT 500
+    """, params)
+    bookings = [dict(r) for r in cursor.fetchall()]
+
+    # Restaurant reservation orders
+    params2 = []
+    where2 = []
+    if category:
+        where2.append("LOWER(TRIM(s.category)) = ?")
+        params2.append(category.lower())
+    if q:
+        where2.append("(LOWER(TRIM(rr.contact_name)) LIKE ? OR CAST(rr.id AS TEXT) LIKE ?)")
+        like = f"%{q}%"
+        params2.extend([like, like])
+    where_sql2 = ("WHERE " + " AND ".join(where2)) if where2 else ""
+
+    cursor.execute(f"""
+        SELECT
+            rr.id AS id,
+            ('RES' || printf('%06d', rr.id)) AS order_code,
+            'reservation' AS order_type,
+            s.category AS category,
+            s.name AS service_name,
+            rr.contact_name AS customer_name,
+            rr.contact_phone AS customer_phone,
+            rr.pax AS quantity,
+            NULL AS total_price,
+            rr.reserved_date AS using_date,
+            rr.paid_at AS paid_at,
+            rr.created_at AS created_at,
+            CASE WHEN rr.paid_at IS NOT NULL THEN 'Paid' ELSE 'Unpaid' END AS payment_status
+        FROM restaurant_reservation rr
+        LEFT JOIN service s ON s.id = rr.service_id
+        {where_sql2}
+        ORDER BY COALESCE(rr.paid_at, rr.created_at) DESC
+        LIMIT 500
+    """, params2)
+    reservations = [dict(r) for r in cursor.fetchall()]
+
+    conn.close()
+
+    items = bookings + reservations
+    items.sort(key=lambda x: str(x.get("paid_at") or x.get("created_at") or ""), reverse=True)
+    return jsonify({"items": items[:500]})
+
+@app.route('/admin/orders/export')
+def admin_orders_export():
+    if not require_admin():
+        return jsonify({"message": "Forbidden"}), 403
+
+    # export uses the same filters as /admin/orders/data
+    category = (request.args.get("category") or "").strip()
+    q = (request.args.get("q") or "").strip().lower()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    params = []
+    where = []
+    if category:
+        where.append("LOWER(TRIM(s.category)) = ?")
+        params.append(category.lower())
+    if q:
+        where.append("(LOWER(TRIM(p.name)) LIKE ? OR LOWER(TRIM(bs.order_code)) LIKE ? OR CAST(bs.id AS TEXT) LIKE ?)")
+        like = f"%{q}%"
+        params.extend([like, like, like])
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    cursor.execute(f"""
+        SELECT
+            bs.order_code AS order_code,
+            'booking' AS order_type,
+            s.category AS category,
+            s.name AS service_name,
+            p.name AS customer_name,
+            p.phone AS customer_phone,
+            bs.using_date AS using_date,
+            bs.quantity AS quantity,
+            bs.total_price AS total_price,
+            COALESCE(p.payment_status, 'Unpaid') AS payment_status,
+            bs.paid_at AS paid_at,
+            bs.created_at AS created_at
+        FROM booking_service bs
+        JOIN passenger p ON p.id = bs.passenger_id
+        LEFT JOIN service s ON s.id = bs.service_id
+        {where_sql}
+        ORDER BY COALESCE(bs.paid_at, bs.created_at) DESC
+        LIMIT 2000
+    """, params)
+    items = [dict(r) for r in cursor.fetchall()]
+
+    params2 = []
+    where2 = []
+    if category:
+        where2.append("LOWER(TRIM(s.category)) = ?")
+        params2.append(category.lower())
+    if q:
+        where2.append("(LOWER(TRIM(rr.contact_name)) LIKE ? OR CAST(rr.id AS TEXT) LIKE ?)")
+        like = f"%{q}%"
+        params2.extend([like, like])
+    where_sql2 = ("WHERE " + " AND ".join(where2)) if where2 else ""
+
+    cursor.execute(f"""
+        SELECT
+            ('RES' || printf('%06d', rr.id)) AS order_code,
+            'reservation' AS order_type,
+            s.category AS category,
+            s.name AS service_name,
+            rr.contact_name AS customer_name,
+            rr.contact_phone AS customer_phone,
+            rr.reserved_date AS using_date,
+            rr.pax AS quantity,
+            NULL AS total_price,
+            CASE WHEN rr.paid_at IS NOT NULL THEN 'Paid' ELSE 'Unpaid' END AS payment_status,
+            rr.paid_at AS paid_at,
+            rr.created_at AS created_at
+        FROM restaurant_reservation rr
+        LEFT JOIN service s ON s.id = rr.service_id
+        {where_sql2}
+        ORDER BY COALESCE(rr.paid_at, rr.created_at) DESC
+        LIMIT 2000
+    """, params2)
+    items2 = [dict(r) for r in cursor.fetchall()]
+
+    conn.close()
+
+    all_items = items + items2
+    all_items.sort(key=lambda x: str(x.get("paid_at") or x.get("created_at") or ""), reverse=True)
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "order_code", "order_type", "category", "service_name",
+        "customer_name", "customer_phone", "using_date",
+        "quantity", "total_price", "payment_status", "paid_at", "created_at"
+    ])
+    for it in all_items:
+        writer.writerow([
+            it.get("order_code") or "",
+            it.get("order_type") or "",
+            it.get("category") or "",
+            it.get("service_name") or "",
+            it.get("customer_name") or "",
+            it.get("customer_phone") or "",
+            it.get("using_date") or "",
+            it.get("quantity") or "",
+            it.get("total_price") or "",
+            it.get("payment_status") or "",
+            it.get("paid_at") or "",
+            it.get("created_at") or "",
+        ])
+
+    csv_text = output.getvalue()
+    filename = "orders_export.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 # Chi tiết khách hàng
 @app.route("/passenger/<int:id>/detail")

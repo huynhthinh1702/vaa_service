@@ -1,0 +1,150 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="card">
+    <h2 style="margin-top:0;">Quản lý tài khoản người dùng</h2>
+    <div class="page-subtitle">Có thể sửa thông tin, xoá, và active/deactive tài khoản.</div>
+</div>
+
+<div class="card">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <input id="q" placeholder="Tìm username / email / fullname..." style="min-width: 320px;">
+        <button onclick="load()">Search</button>
+        <button class="secondary" onclick="resetFilters()">Reset</button>
+    </div>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Full name</th>
+                <th>Email</th>
+                <th>DOB</th>
+                <th>Role</th>
+                <th>Active</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+let state = { items: [] };
+
+function esc(text) {
+    return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function resetFilters() {
+    document.getElementById("q").value = "";
+    render();
+}
+
+function load() {
+    fetch(API + "/admin/users/list")
+        .then(res => res.json())
+        .then(data => {
+            state.items = data.items || [];
+            render();
+        });
+}
+
+function render() {
+    const q = document.getElementById("q").value.trim().toLowerCase();
+    let items = state.items.slice();
+    if (q) {
+        items = items.filter(u =>
+            String(u.username || "").toLowerCase().includes(q) ||
+            String(u.email || "").toLowerCase().includes(q) ||
+            String(u.fullname || "").toLowerCase().includes(q)
+        );
+    }
+
+    const tbody = document.getElementById("list");
+    tbody.innerHTML = "";
+    items.forEach(u => {
+        const active = Number(u.is_active || 1) === 1;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><b>${esc(u.username)}</b></td>
+            <td><input value="${esc(u.fullname || "")}" data-k="fullname" data-u="${esc(u.username)}"></td>
+            <td><input value="${esc(u.email || "")}" data-k="email" data-u="${esc(u.username)}"></td>
+            <td><input type="date" value="${esc(u.dob || "")}" data-k="dob" data-u="${esc(u.username)}"></td>
+            <td>
+                <select data-k="role" data-u="${esc(u.username)}">
+                    <option value="user" ${String(u.role) === "user" ? "selected" : ""}>user</option>
+                    <option value="admin" ${String(u.role) === "admin" ? "selected" : ""}>admin</option>
+                </select>
+            </td>
+            <td><span class="badge ${active ? "success" : "warning"}">${active ? "Active" : "Deactive"}</span></td>
+            <td>
+                <div class="actions">
+                    <button class="secondary" onclick="save('${esc(u.username)}')">Lưu</button>
+                    <button class="secondary" onclick="toggle('${esc(u.username)}')">${active ? "Deactive" : "Active"}</button>
+                    <button onclick="del('${esc(u.username)}')">Xoá</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function collectRow(username) {
+    const inputs = Array.from(document.querySelectorAll(`[data-u="${CSS.escape(username)}"]`));
+    const out = { username };
+    inputs.forEach(el => {
+        out[el.getAttribute("data-k")] = el.value;
+    });
+    const original = state.items.find(x => x.username === username) || {};
+    out.is_active = original.is_active;
+    return out;
+}
+
+function save(username) {
+    const payload = collectRow(username);
+    fetch(API + "/admin/users/update/" + encodeURIComponent(username), {
+        method: "PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(d => {
+        alert(d.message || "Updated");
+        load();
+    });
+}
+
+function toggle(username) {
+    fetch(API + "/admin/users/toggle/" + encodeURIComponent(username), { method: "PUT" })
+        .then(res => res.json())
+        .then(d => {
+            alert(d.message || "Toggled");
+            load();
+        });
+}
+
+function del(username) {
+    if (!confirm("Xoá tài khoản " + username + "?")) return;
+    fetch(API + "/admin/users/delete/" + encodeURIComponent(username), { method: "DELETE" })
+        .then(res => res.json())
+        .then(d => {
+            alert(d.message || "Deleted");
+            load();
+        });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    load();
+    document.getElementById("q").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") render();
+    });
+});
+</script>
+
+{% endblock %}
+

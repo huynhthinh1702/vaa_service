@@ -1,0 +1,132 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="card">
+    <h2 style="margin-top:0;">Quản lý đơn hàng</h2>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <select id="categoryFilter">
+            <option value="">Tất cả category</option>
+            <option value="lounge">lounge</option>
+            <option value="sleep">sleep</option>
+            <option value="restaurant">restaurant</option>
+        </select>
+
+        <input id="q" placeholder="Tìm tên khách / mã đơn..." style="min-width: 260px;">
+        <button onclick="loadOrders()">Search</button>
+        <button class="secondary" onclick="resetFilters()">Reset</button>
+
+        <div style="flex:1;"></div>
+        <button onclick="exportExcel()">Xuất Excel (CSV)</button>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 10px;">
+        <div>
+            <div class="page-title">Danh sách đơn</div>
+            <div class="page-subtitle">Cột thời gian hiển thị theo thời điểm khách thanh toán (paid_at)</div>
+        </div>
+        <div class="badge" id="countBadge">0</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Mã đơn</th>
+                <th>Loại</th>
+                <th>Category</th>
+                <th>Dịch vụ</th>
+                <th>Khách hàng</th>
+                <th>SĐT</th>
+                <th>Using date</th>
+                <th>Số lượng</th>
+                <th>Thành tiền</th>
+                <th>Thanh toán</th>
+                <th>Paid at</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+
+function esc(text) {
+    return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function fmtTime(text) {
+    const t = String(text || "").trim();
+    if (!t) return "—";
+    return t.replace("T", " ").slice(0, 19);
+}
+
+function fmtMoney(num) {
+    const v = Number(num);
+    if (!Number.isFinite(v)) return "—";
+    return new Intl.NumberFormat("vi-VN").format(Math.round(v)) + " VND";
+}
+
+function buildQuery() {
+    const category = document.getElementById("categoryFilter").value;
+    const q = document.getElementById("q").value.trim();
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (q) params.set("q", q);
+    return params.toString() ? ("?" + params.toString()) : "";
+}
+
+function loadOrders() {
+    fetch(API + "/admin/orders/data" + buildQuery())
+        .then(res => res.json())
+        .then(data => {
+            const items = data.items || [];
+            document.getElementById("countBadge").innerText = items.length;
+
+            const tbody = document.getElementById("list");
+            tbody.innerHTML = "";
+
+            items.forEach(it => {
+                const paid = String(it.payment_status || "").toLowerCase() === "paid" || !!it.paid_at;
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><b>${esc(it.order_code || ("#" + it.id))}</b></td>
+                    <td>${esc(it.order_type || "")}</td>
+                    <td>${esc(it.category || "")}</td>
+                    <td>${esc(it.service_name || "")}</td>
+                    <td>${esc(it.customer_name || "")}</td>
+                    <td>${esc(it.customer_phone || "")}</td>
+                    <td>${esc(it.using_date || "") || "—"}</td>
+                    <td>${esc(it.quantity ?? "")}</td>
+                    <td>${fmtMoney(it.total_price)}</td>
+                    <td><span class="badge ${paid ? "success" : "warning"}">${paid ? "Paid" : "Unpaid"}</span></td>
+                    <td>${fmtTime(it.paid_at || it.created_at)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+}
+
+function resetFilters() {
+    document.getElementById("categoryFilter").value = "";
+    document.getElementById("q").value = "";
+    loadOrders();
+}
+
+function exportExcel() {
+    window.location.href = API + "/admin/orders/export" + buildQuery();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadOrders();
+    document.getElementById("q").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") loadOrders();
+    });
+});
+</script>
+
+{% endblock %}
+

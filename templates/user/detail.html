@@ -265,15 +265,7 @@ function formatMoney(num) {
     return new Intl.NumberFormat("vi-VN").format(Math.round(num || 0)) + " VND";
 }
 
-function getGalleryImages(service) {
-    const seeds = [
-        "lounge-main-" + (service.id || "x"),
-        "lounge-seat-" + (service.id || "x"),
-        "lounge-hall-" + (service.id || "x"),
-        "lounge-food-" + (service.id || "x")
-    ];
-    const generated = seeds.map(seed => `https://picsum.photos/seed/${encodeURIComponent(seed)}/1200/720`);
-
+async function getGalleryImages(service) {
     const unique = [];
     const pushIfUnique = (url) => {
         if (!url) return;
@@ -282,9 +274,23 @@ function getGalleryImages(service) {
         if (!unique.includes(normalized)) unique.push(normalized);
     };
 
+    // 1) images uploaded by admin
+    try {
+        const res = await fetch(API + "/service/" + service.id + "/images");
+        const data = await res.json();
+        (data.items || []).forEach(x => pushIfUnique(x.url));
+    } catch (e) {}
+
+    // 2) fallback to single image field
     pushIfUnique(service.image);
-    generated.forEach(pushIfUnique);
-    return unique.slice(0, 4);
+
+    // 3) last fallback
+    if (!unique.length) {
+        const seed = "service-" + (service.id || "x");
+        pushIfUnique(`https://picsum.photos/seed/${encodeURIComponent(seed)}/1200/720`);
+    }
+
+    return unique.slice(0, 8);
 }
 
 function renderGallery(images) {
@@ -333,7 +339,7 @@ function renderAmenities(amenitiesText) {
     amenities.forEach(item => {
         const div = document.createElement("div");
         div.className = "amenity";
-        div.innerText = "✓ " + item;
+        div.innerText = "• " + item;
         list.appendChild(div);
     });
 }
@@ -386,7 +392,7 @@ function renderAmenities(amenitiesText) {
         }
 
         renderAmenities(s.amenities);
-        renderGallery(getGalleryImages(s));
+        getGalleryImages(s).then(renderGallery);
 
         // Log view for personalization
         try {

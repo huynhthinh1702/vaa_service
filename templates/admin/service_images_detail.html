@@ -1,0 +1,106 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px;">
+        <div>
+            <div class="page-title">Upload hình ảnh dịch vụ</div>
+            <div class="page-subtitle">Service ID: {{ service_id }}</div>
+        </div>
+        <button class="secondary" onclick="window.location.href='/admin/service-images'">Quay lại</button>
+    </div>
+
+    <div style="margin-top: 12px; display:flex; gap: 10px; flex-wrap:wrap; align-items:center;">
+        <input id="files" type="file" multiple accept="image/*" />
+        <button onclick="upload()">Upload</button>
+        <span class="badge" id="status">—</span>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 10px;">
+        <div class="page-title" style="font-size:16px;">Ảnh đã upload</div>
+        <div class="badge" id="countBadge">0</div>
+    </div>
+    <div class="grid cols-3" id="grid"></div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+const serviceId = Number("{{ service_id }}");
+
+function esc(text) {
+    return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function setStatus(text, ok=false) {
+    const el = document.getElementById("status");
+    el.innerText = text;
+    el.className = "badge " + (ok ? "success" : "warning");
+}
+
+function load() {
+    fetch(API + "/admin/service-images/" + serviceId + "/list")
+        .then(res => res.json())
+        .then(data => {
+            const items = data.items || [];
+            document.getElementById("countBadge").innerText = items.length;
+            const grid = document.getElementById("grid");
+            grid.innerHTML = "";
+            items.forEach(it => {
+                const wrap = document.createElement("div");
+                wrap.className = "panel";
+                wrap.innerHTML = `
+                    <img src="${esc(it.url)}" alt="img" style="width:100%; height: 180px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(15, 23, 42, 0.10);" />
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top: 10px;">
+                        <div class="muted" style="font-size:12px;">ID: ${esc(it.id)}</div>
+                        <button class="secondary" onclick="del(${Number(it.id)})">Xoá</button>
+                    </div>
+                `;
+                grid.appendChild(wrap);
+            });
+        });
+}
+
+function upload() {
+    const input = document.getElementById("files");
+    const files = input.files;
+    if (!files || !files.length) {
+        setStatus("Chưa chọn file.", false);
+        return;
+    }
+
+    const form = new FormData();
+    Array.from(files).forEach(f => form.append("files", f));
+    setStatus("Đang upload...", true);
+
+    fetch(API + "/admin/service-images/" + serviceId + "/upload", { method: "POST", body: form })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Upload thất bại");
+            return data;
+        })
+        .then(d => {
+            setStatus(d.message || "Uploaded", true);
+            input.value = "";
+            load();
+        })
+        .catch(e => setStatus(e.message || "Upload lỗi", false));
+}
+
+function del(id) {
+    if (!confirm("Xoá ảnh này?")) return;
+    fetch(API + "/admin/service-images/image/" + id + "/delete", { method: "DELETE" })
+        .then(res => res.json())
+        .then(d => {
+            setStatus(d.message || "Deleted", true);
+            load();
+        });
+}
+
+document.addEventListener("DOMContentLoaded", load);
+</script>
+
+{% endblock %}
+

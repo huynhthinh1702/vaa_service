@@ -215,7 +215,8 @@ function loadOrder() {
     if (isRestaurant) {
         document.getElementById("ocServicePanelTitle").textContent = "Thông tin nhà hàng & cà phê";
         document.getElementById("ocWarnText").textContent = "Lưu ý: Vui lòng đến đúng giờ để được giữ bàn. Nếu thay đổi/huỷ, hãy liên hệ hotline nhà hàng.";
-        document.getElementById("ocQtyTitle").textContent = "Thông tin đặt bàn";
+        // Keep ocGuestTotal span to avoid breaking later updates
+        document.getElementById("ocQtyTitle").innerHTML = 'Thông tin đặt bàn (<span id="ocGuestTotal">0</span>)';
         document.getElementById("ocBtn").textContent = "Xác nhận đặt bàn";
     }
 
@@ -601,14 +602,21 @@ async function confirmPayment() {
 
     console.log("[Giả lập thanh toán]", { method, note, vatWant: vat, order: d });
 
-    // Đồng bộ trạng thái thanh toán cho admin (chỉ áp dụng cho booking dạng vé)
-    if (d.serviceCategory !== "restaurant") {
-        try {
-            if (d.passengerId) {
+    // Đồng bộ trạng thái thanh toán cho admin (lưu paid_at theo thời điểm khách xác nhận)
+    try {
+        if (d.serviceCategory === "restaurant") {
+            if (d.reservation?.id) {
+                await fetch("/reservation/pay/" + d.reservation.id, { method: "PUT" });
+            }
+        } else {
+            if (d.bookingId) {
+                await fetch("/order/pay/" + d.bookingId, { method: "PUT" });
+            } else if (d.passengerId) {
+                // fallback legacy
                 await fetch("/passenger/pay/" + d.passengerId, { method: "PUT" });
             }
-        } catch (e) {}
-    }
+        }
+    } catch (e) {}
 
     let emailMessage = "";
     try {

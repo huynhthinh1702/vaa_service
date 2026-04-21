@@ -601,7 +601,8 @@ function submitBooking() {
             body: JSON.stringify({
                 passenger_id: passengerId,
                 service_id: serviceId,
-                quantity: quantity
+                quantity: quantity,
+                using_date: document.getElementById("serviceDate").value
             })
         }).then(res => res.json()).then(bookingRes => ({ passengerId, bookingRes }));
     })
@@ -645,6 +646,8 @@ function submitBooking() {
             vat,
             total,
             passengerId,
+            bookingId: bookingRes.booking_id,
+            orderCode: bookingRes.order_code,
             bookingMessage: bookingRes && bookingRes.message ? bookingRes.message : "",
             invoiceText: document.getElementById("invoicePreview").innerText
         };

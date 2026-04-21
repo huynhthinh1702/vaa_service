@@ -25,6 +25,12 @@
     <h2>Danh sách dịch vụ</h2>
 
     <button onclick="loadServices()">Load</button>
+    <select id="categoryFilter" onchange="loadServices()">
+        <option value="">Tất cả category</option>
+        <option value="lounge">lounge</option>
+        <option value="sleep">sleep</option>
+        <option value="restaurant">restaurant</option>
+    </select>
 
     <table>
         <thead>
@@ -123,8 +129,11 @@ function loadServices() {
     .then(data => {
         const list = document.getElementById("list");
         list.innerHTML = "";
+        const cat = (document.getElementById("categoryFilter").value || "").trim();
 
-        data.forEach(s => {
+        data
+        .filter(s => !cat || String(s.category || "").trim() === cat)
+        .forEach(s => {
             const tr = document.createElement("tr");
 
             tr.innerHTML = `

@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<div class="grid cols-2" style="margin-bottom: 16px;">
+<div class="grid cols-3" style="margin-bottom: 16px;">
     <div class="kpi">
         <div>
             <p class="label">Tổng doanh thu</p>
@@ -19,6 +19,15 @@
             <p class="hint">Số lượng booking hiện có</p>
         </div>
         <div style="opacity:.9; font-weight:700;">TOTAL</div>
+    </div>
+
+    <div class="kpi" style="background: linear-gradient(135deg, #1f7a4d, #22c55e);">
+        <div>
+            <p class="label">Top category sử dụng</p>
+            <p class="value" id="topCategory">—</p>
+            <p class="hint" id="topCategoryHint">lounge / restaurant / sleep</p>
+        </div>
+        <div style="opacity:.9; font-weight:700;">TOP</div>
     </div>
 </div>
 
@@ -109,10 +118,23 @@ function loadChart() {
     });
 }
 
+function loadTopCategory() {
+    fetch(API + "/dashboard/top-categories")
+        .then(res => res.json())
+        .then(data => {
+            const items = data.items || [];
+            const top = items[0] || null;
+            document.getElementById("topCategory").innerText = top ? (top.category + " (" + top.count + ")") : "—";
+            const hint = items.map(x => `${x.category}:${x.count}`).join(" • ");
+            document.getElementById("topCategoryHint").innerText = hint || "—";
+        });
+}
+
 // LOAD ALL
 loadRevenue();
 loadCount();
 loadChart();
+loadTopCategory();
 
 </script>
 
