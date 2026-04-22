@@ -5,14 +5,10 @@ body {
 
 /* HEADER */
 header {
-    background: #003366;
-    color: white;
-    padding: 15px;
+    box-sizing: border-box;
 }
 
 nav a {
-    color: white;
-    margin-right: 20px;
     text-decoration: none;
 }
 
@@ -59,15 +55,67 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #0b2c6b;
-    color: white;
-    padding: 15px 40px;
+    gap: 12px;
+    padding: 14px 22px;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: transparent;
+    color: #1d2746;
+}
+
+.header-shell {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 1px 0 rgba(210, 220, 245, 0.9), 0 8px 28px rgba(11, 44, 107, 0.07);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.header .logo {
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    font-size: 20px;
+    color: #0b2c6b;
+}
+
+.header nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.header nav a {
+    color: #2a3760;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.header nav a:hover {
+    background: #e8eefc;
+    color: #0b2c6b;
 }
 
 .auth button {
-    margin-left: 10px;
-    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid #c5d2f0;
+    background: #fff;
+    color: #0b2c6b;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 16px;
     cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth button {
+    margin-left: 0;
 }
 
 /* MODAL */

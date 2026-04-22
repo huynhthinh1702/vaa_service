@@ -146,6 +146,7 @@
             object-fit: cover;
             border: 1px solid #d8e2f8;
             margin-bottom: 10px;
+            cursor: zoom-in;
         }
         .detail-page .gallery-thumb-row {
             display: grid;
@@ -158,10 +159,54 @@
             border-radius: 8px;
             object-fit: cover;
             border: 2px solid transparent;
-            cursor: pointer;
+            cursor: zoom-in;
         }
         .detail-page .gallery-thumb.active {
             border-color: #2e55c7;
+        }
+        .img-lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(5, 12, 35, 0.92);
+            align-items: center;
+            justify-content: center;
+            padding: max(16px, 2vw);
+            box-sizing: border-box;
+        }
+        .img-lightbox.open {
+            display: flex;
+        }
+        .img-lightbox img {
+            max-width: min(96vw, 1400px);
+            max-height: 92vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        }
+        .img-lightbox-close {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .img-lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.22);
         }
         .detail-page .desc-text {
             line-height: 1.65;
@@ -183,13 +228,20 @@
 </head>
 
 <body class="detail-page">
-<header class="header">
-    <div class="logo">VAA</div>
-    <nav>
-        <a href="/user">Trang chủ</a>
-        <a href="/history">Lịch sử</a>
-    </nav>
-</header>
+<div class="header-shell">
+    <header class="header">
+        <div class="logo">VAA</div>
+        <nav>
+            <a href="/user">Trang chủ</a>
+            <a href="/profile">Tài khoản</a>
+        </nav>
+    </header>
+</div>
+
+<div id="imgLightbox" class="img-lightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh lớn">
+    <button type="button" class="img-lightbox-close" id="imgLightboxClose" aria-label="Đóng">&times;</button>
+    <img id="imgLightboxImg" alt="Ảnh phóng to">
+</div>
 
 <div class="detail-wrap">
     <section class="hero">
@@ -293,6 +345,22 @@ async function getGalleryImages(service) {
     return unique.slice(0, 8);
 }
 
+function openImageLightbox(url) {
+    const lb = document.getElementById("imgLightbox");
+    const img = document.getElementById("imgLightboxImg");
+    if (!url || !lb || !img) return;
+    img.src = url;
+    lb.classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+
+function closeImageLightbox() {
+    const lb = document.getElementById("imgLightbox");
+    if (!lb) return;
+    lb.classList.remove("open");
+    document.body.style.overflow = "";
+}
+
 function renderGallery(images) {
     const heroImage = document.getElementById("heroImage");
     const galleryMain = document.getElementById("galleryMain");
@@ -308,17 +376,30 @@ function renderGallery(images) {
         if (activeThumb) activeThumb.classList.add("active");
     };
 
+    galleryMain.onclick = () => openImageLightbox(galleryMain.src);
+
     images.forEach((url, idx) => {
         const thumb = document.createElement("img");
         thumb.className = "gallery-thumb" + (idx === 0 ? " active" : "");
         thumb.src = url;
         thumb.alt = "Ảnh minh họa " + (idx + 1);
-        thumb.onclick = () => setMain(url, thumb);
+        thumb.onclick = () => {
+            setMain(url, thumb);
+            openImageLightbox(url);
+        };
         thumbWrap.appendChild(thumb);
     });
 
     setMain(images[0], thumbWrap.querySelector(".gallery-thumb"));
 }
+
+document.getElementById("imgLightboxClose").addEventListener("click", closeImageLightbox);
+document.getElementById("imgLightbox").addEventListener("click", (e) => {
+    if (e.target.id === "imgLightbox") closeImageLightbox();
+});
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeImageLightbox();
+});
 
 function renderAmenities(amenitiesText) {
     const list = document.getElementById("amenitiesList");
@@ -347,7 +428,8 @@ function renderAmenities(amenitiesText) {
     fetch(API + "/service/list")
     .then(res => res.json())
     .then(data => {
-        const s = data.find(x => String(x.id) === String(id));
+        const items = Array.isArray(data) ? data : (data.items || []);
+        const s = items.find(x => String(x.id) === String(id));
         if (!s) {
             alert("Không tìm thấy phòng chờ.");
             window.location.href = "/user";

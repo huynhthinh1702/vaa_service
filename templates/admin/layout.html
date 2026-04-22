@@ -5,13 +5,13 @@
     <title>Admin</title>
     <style>
 :root{
-    --bg: #f5f7fb;
+    --bg: #f2f5fb;
     --surface: #ffffff;
     --text: #0f172a;
     --muted: #64748b;
-    --border: rgba(15, 23, 42, 0.08);
-    --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-    --shadow-sm: 0 6px 18px rgba(2, 6, 23, 0.06);
+    --border: rgba(15, 23, 42, 0.07);
+    --shadow: 0 14px 34px rgba(2, 6, 23, 0.08);
+    --shadow-sm: 0 8px 20px rgba(2, 6, 23, 0.06);
     --primary: #1e4db7;
     --primary-2: #0b2c6b;
     --radius: 14px;
@@ -26,42 +26,51 @@ body {
 
 /* SIDEBAR */
 .sidebar {
-    width: 230px;
+    width: 248px;
     height: 100vh;
-    background: linear-gradient(180deg, var(--primary-2), #061a3a);
+    background: linear-gradient(180deg, #0d2e73, #081e4a);
     color: white;
     position: fixed;
-    padding: 20px;
+    padding: 20px 16px;
     box-sizing: border-box;
+    border-right: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar h3 {
-    margin-bottom: 30px;
+    margin: 4px 8px 22px;
+    font-size: 20px;
+    letter-spacing: 0.03em;
 }
 
 .sidebar a {
     display: block;
-    color: #ccc;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    color: #d7e4ff;
+    padding: 11px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
     text-decoration: none;
-    transition: 0.3s;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: 0.2s;
 }
 
 .sidebar a:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.14);
+    border-color: rgba(255,255,255,0.12);
     color: white;
 }
 
 .sidebar a.active {
-    background: rgba(255,255,255,0.14);
+    background: linear-gradient(180deg, rgba(255,255,255,0.24), rgba(255,255,255,0.12));
+    border-color: rgba(255,255,255,0.2);
     color: #ffffff;
+    box-shadow: 0 6px 16px rgba(4, 12, 30, 0.18);
 }
 
 /* CONTENT */
 .content {
-    margin-left: 250px;
+    margin-left: 268px;
     padding: 30px;
     box-sizing: border-box;
 }
@@ -69,7 +78,7 @@ body {
 /* HEADER */
 .header {
     background: var(--surface);
-    padding: 15px 20px;
+    padding: 16px 20px;
     border-radius: var(--radius);
     margin-bottom: 25px;
     box-shadow: var(--shadow-sm);
@@ -109,7 +118,7 @@ input:focus, select:focus, textarea:focus {
 
 /* BUTTON */
 button {
-    background: var(--primary-2);
+    background: linear-gradient(180deg, #1845b0, #0b2c6b);
     color: white;
     border: none;
     padding: 10px 18px;
@@ -119,7 +128,7 @@ button {
 }
 
 button:hover {
-    background: #061a3a;
+    filter: brightness(1.06);
 }
 
 button.secondary {
@@ -143,10 +152,12 @@ table {
 }
 
 th {
-    background: var(--primary-2);
-    color: white;
+    background: #eef3ff;
+    color: #243b74;
     padding: 12px;
     text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
 }
 
 td {
@@ -155,7 +166,7 @@ td {
 }
 
 tr:hover {
-    background: #f9f9f9;
+    background: #f7faff;
 }
 
 /* BADGES */
@@ -283,19 +294,19 @@ button:disabled {
 
 <div class="sidebar">
     <h3>Admin</h3>
-    <a href="/admin" class="{% if request.path in ['/admin', '/admin/orders'] %}active{% endif %}">Order</a>
-    <a href="/admin/service" class="{% if request.path.startswith('/admin/service') %}active{% endif %}">Service</a>
-    <a href="/admin/service-images" class="{% if request.path.startswith('/admin/service-images') %}active{% endif %}">Service Images</a>
-    <a href="/admin/users" class="{% if request.path.startswith('/admin/users') %}active{% endif %}">Users</a>
+    <a href="/admin" class="{% if request.path in ['/admin', '/admin/orders'] %}active{% endif %}">Đơn hàng</a>
+    <a href="/admin/service" class="{% if request.path.startswith('/admin/service') %}active{% endif %}">Dịch vụ</a>
+    <a href="/admin/service-images" class="{% if request.path.startswith('/admin/service-images') %}active{% endif %}">Ảnh dịch vụ</a>
+    <a href="/admin/users" class="{% if request.path.startswith('/admin/users') %}active{% endif %}">Người dùng</a>
     <a href="/admin/dashboard" class="{% if request.path.startswith('/admin/dashboard') %}active{% endif %}">Dashboard</a>
-    <a href="/user">User Site</a>
+    <a href="/user">Trang người dùng</a>
 </div>
 
 <div class="content">
     <div class="header">
         <div>
             <div class="page-title">Admin Panel</div>
-            <div class="page-subtitle">Quản lý dữ liệu & thống kê</div>
+            <div class="page-subtitle">Quản lý dữ liệu, đơn hàng và thống kê</div>
         </div>
     </div>
 

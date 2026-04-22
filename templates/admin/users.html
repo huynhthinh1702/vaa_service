@@ -16,25 +16,77 @@
 </div>
 
 <div class="card">
-    <table>
-        <thead>
-            <tr>
-                <th>Username</th>
-                <th>Full name</th>
-                <th>Email</th>
-                <th>DOB</th>
-                <th>Role</th>
-                <th>Active</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="list"></tbody>
-    </table>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Full name</th>
+                    <th>Email</th>
+                    <th>DOB</th>
+                    <th>Role</th>
+                    <th>Active</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="list"></tbody>
+        </table>
+    </div>
 </div>
+
+<style>
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table-wrap table {
+    min-width: 980px;
+}
+
+.notice-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    background: rgba(15, 23, 42, 0.28);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.notice-modal.show {
+    display: flex;
+}
+
+.notice-modal .notice-box {
+    max-width: 520px;
+    width: 100%;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.2);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    font-weight: 600;
+}
+
+.notice-modal .notice-box.success {
+    background: #eafaf3;
+    color: #0f5132;
+    border-color: rgba(16, 185, 129, 0.28);
+}
+
+.notice-modal .notice-box.warning {
+    background: #fff7ed;
+    color: #7c2d12;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+</style>
 
 <script>
 const API = "http://127.0.0.1:5000";
-let state = { items: [] };
+let state = { items: [], page: 1, pageSize: 10, total: 0 };
+let noticeTimer = null;
 
 function esc(text) {
     return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
@@ -42,33 +94,38 @@ function esc(text) {
 
 function resetFilters() {
     document.getElementById("q").value = "";
-    render();
+    state.page = 1;
+    load();
 }
 
 function load() {
-    fetch(API + "/admin/users/list")
-        .then(res => res.json())
+    const q = document.getElementById("q").value.trim();
+    const params = new URLSearchParams({
+        page: String(state.page),
+        page_size: String(state.pageSize)
+    });
+    if (q) params.set("q", q);
+    fetch(API + "/admin/users/list?" + params.toString())
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Load failed");
+            return data;
+        })
         .then(data => {
             state.items = data.items || [];
+            state.total = Number(data.total || 0);
+            state.page = Number(data.page || state.page);
+            state.pageSize = Number(data.page_size || state.pageSize);
             render();
-        });
+        })
+        .catch((err) => showNotice(err.message || "Load failed", false));
 }
 
 function render() {
-    const q = document.getElementById("q").value.trim().toLowerCase();
-    let items = state.items.slice();
-    if (q) {
-        items = items.filter(u =>
-            String(u.username || "").toLowerCase().includes(q) ||
-            String(u.email || "").toLowerCase().includes(q) ||
-            String(u.fullname || "").toLowerCase().includes(q)
-        );
-    }
-
     const tbody = document.getElementById("list");
     tbody.innerHTML = "";
-    items.forEach(u => {
-        const active = Number(u.is_active || 1) === 1;
+    state.items.forEach(u => {
+        const active = Number(u.is_active) === 1;
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><b>${esc(u.username)}</b></td>
@@ -92,6 +149,39 @@ function render() {
         `;
         tbody.appendChild(tr);
     });
+    renderPager();
+}
+
+function renderPager() {
+    const host = document.getElementById("pager");
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    host.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px;">
+            <span class="page-subtitle">Trang ${state.page}/${totalPages} - ${state.total} tài khoản</span>
+            <div class="actions">
+                <button class="secondary" ${state.page <= 1 ? "disabled" : ""} onclick="changePage(-1)">Prev</button>
+                <button class="secondary" ${state.page >= totalPages ? "disabled" : ""} onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    `;
+}
+
+function changePage(step) {
+    const next = state.page + step;
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    if (next < 1 || next > totalPages) return;
+    state.page = next;
+    load();
+}
+
+function showNotice(msg, ok=true) {
+    const modal = document.getElementById("notice");
+    const box = document.getElementById("notice-box");
+    box.innerText = msg;
+    box.className = "notice-box " + (ok ? "success" : "warning");
+    modal.classList.add("show");
+    if (noticeTimer) clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => modal.classList.remove("show"), 1800);
 }
 
 function collectRow(username) {
@@ -112,39 +202,68 @@ function save(username) {
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify(payload)
     })
-    .then(res => res.json())
+    .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Update failed");
+        return data;
+    })
     .then(d => {
-        alert(d.message || "Updated");
+        showNotice(d.message || "Updated", true);
         load();
-    });
+    })
+    .catch((err) => showNotice(err.message || "Update failed", false));
 }
 
 function toggle(username) {
-    fetch(API + "/admin/users/toggle/" + encodeURIComponent(username), { method: "PUT" })
-        .then(res => res.json())
+    const current = state.items.find(x => x.username === username);
+    const nextActive = Number(current?.is_active) === 1 ? 0 : 1;
+    fetch(API + "/admin/users/toggle/" + encodeURIComponent(username), {
+        method: "PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ is_active: nextActive })
+    })
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Update active status failed");
+            return data;
+        })
         .then(d => {
-            alert(d.message || "Toggled");
+            showNotice(d.message || "Updated", true);
             load();
-        });
+        })
+        .catch((err) => showNotice(err.message || "Update active status failed", false));
 }
 
 function del(username) {
     if (!confirm("Xoá tài khoản " + username + "?")) return;
     fetch(API + "/admin/users/delete/" + encodeURIComponent(username), { method: "DELETE" })
-        .then(res => res.json())
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Delete failed");
+            return data;
+        })
         .then(d => {
-            alert(d.message || "Deleted");
+            showNotice(d.message || "Deleted", true);
             load();
-        });
+        })
+        .catch((err) => showNotice(err.message || "Delete failed", false));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     load();
     document.getElementById("q").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") render();
+        if (e.key === "Enter") {
+            state.page = 1;
+            load();
+        }
     });
 });
 </script>
+
+<div id="notice" class="notice-modal" onclick="this.classList.remove('show')">
+    <div id="notice-box" class="notice-box success" onclick="event.stopPropagation()"></div>
+</div>
+<div id="pager"></div>
 
 {% endblock %}
 

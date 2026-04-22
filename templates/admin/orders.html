@@ -53,6 +53,7 @@
 
 <script>
 const API = "http://127.0.0.1:5000";
+let state = { page: 1, pageSize: 20, total: 0 };
 
 function esc(text) {
     return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
@@ -76,6 +77,8 @@ function buildQuery() {
     const params = new URLSearchParams();
     if (category) params.set("category", category);
     if (q) params.set("q", q);
+    params.set("page", String(state.page));
+    params.set("page_size", String(state.pageSize));
     return params.toString() ? ("?" + params.toString()) : "";
 }
 
@@ -84,7 +87,10 @@ function loadOrders() {
         .then(res => res.json())
         .then(data => {
             const items = data.items || [];
-            document.getElementById("countBadge").innerText = items.length;
+            state.total = Number(data.total || 0);
+            state.page = Number(data.page || state.page);
+            state.pageSize = Number(data.page_size || state.pageSize);
+            document.getElementById("countBadge").innerText = state.total;
 
             const tbody = document.getElementById("list");
             tbody.innerHTML = "";
@@ -107,12 +113,35 @@ function loadOrders() {
                 `;
                 tbody.appendChild(tr);
             });
+            renderPager();
         });
+}
+
+function renderPager() {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    document.getElementById("pager").innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px; flex-wrap:wrap;">
+            <span class="page-subtitle">Trang ${state.page}/${totalPages}</span>
+            <div class="actions">
+                <button class="secondary" ${state.page <= 1 ? "disabled" : ""} onclick="changePage(-1)">Prev</button>
+                <button class="secondary" ${state.page >= totalPages ? "disabled" : ""} onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    `;
+}
+
+function changePage(step) {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    const next = state.page + step;
+    if (next < 1 || next > totalPages) return;
+    state.page = next;
+    loadOrders();
 }
 
 function resetFilters() {
     document.getElementById("categoryFilter").value = "";
     document.getElementById("q").value = "";
+    state.page = 1;
     loadOrders();
 }
 
@@ -123,10 +152,15 @@ function exportExcel() {
 document.addEventListener("DOMContentLoaded", () => {
     loadOrders();
     document.getElementById("q").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") loadOrders();
+        if (e.key === "Enter") {
+            state.page = 1;
+            loadOrders();
+        }
     });
 });
 </script>
+
+<div id="pager"></div>
 
 {% endblock %}
 

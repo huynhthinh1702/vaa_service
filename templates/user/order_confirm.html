@@ -91,10 +91,12 @@
     </style>
 </head>
 <body class="oc-page">
-<header class="header">
-    <div class="logo">VAA</div>
-    <nav><a href="/user">Trang chủ</a> <a href="/booking">Trở về</a></nav>
-</header>
+<div class="header-shell">
+    <header class="header">
+        <div class="logo">VAA</div>
+        <nav><a href="/user">Trang chủ</a> <a href="/profile">Tài khoản</a> <a href="/booking">Trở về</a></nav>
+    </header>
+</div>
 
 <div class="oc-wrap">
     <h1 style="margin: 8px 0 16px; color: #0b2c6b; font-size: 22px;">Xác nhận đơn hàng</h1>
@@ -317,9 +319,8 @@ function renderLoungeInfoFromDb(orderData) {
     fetch(API + "/service/list")
         .then(res => res.json())
         .then(data => {
-            const service = Array.isArray(data)
-                ? data.find(s => String(s.id) === String(orderData.serviceId))
-                : null;
+            const items = Array.isArray(data) ? data : (data.items || []);
+            const service = items.find(s => String(s.id) === String(orderData.serviceId));
 
             const serviceName = service?.name || orderData.serviceName || "—";
             const openTime = service?.open_time || orderData.openTime || "";

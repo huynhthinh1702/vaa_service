@@ -23,6 +23,7 @@
 
 <script>
 const API = "http://127.0.0.1:5000";
+let state = { page: 1, pageSize: 12, total: 0 };
 
 function esc(text) {
     return String(text ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
@@ -31,18 +32,26 @@ function esc(text) {
 function resetFilters() {
     document.getElementById("categoryFilter").value = "";
     document.getElementById("q").value = "";
+    state.page = 1;
     load();
 }
 
 function load() {
     const category = document.getElementById("categoryFilter").value.trim();
     const q = document.getElementById("q").value.trim().toLowerCase();
-    fetch(API + "/admin/service-images/services")
+    const params = new URLSearchParams({
+        page: String(state.page),
+        page_size: String(state.pageSize)
+    });
+    if (category) params.set("category", category);
+    if (q) params.set("q", q);
+    fetch(API + "/admin/service-images/services?" + params.toString())
         .then(res => res.json())
         .then(data => {
-            let items = data.items || [];
-            if (category) items = items.filter(x => String(x.category || "").trim() === category);
-            if (q) items = items.filter(x => String(x.name || "").toLowerCase().includes(q));
+            const items = data.items || [];
+            state.total = Number(data.total || 0);
+            state.page = Number(data.page || state.page);
+            state.pageSize = Number(data.page_size || state.pageSize);
 
             const grid = document.getElementById("grid");
             grid.innerHTML = "";
@@ -58,16 +67,43 @@ function load() {
                 `;
                 grid.appendChild(card);
             });
+            renderPager();
         });
+}
+
+function renderPager() {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    document.getElementById("pager").innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px; flex-wrap:wrap;">
+            <span class="page-subtitle">Trang ${state.page}/${totalPages} - ${state.total} dịch vụ</span>
+            <div class="actions">
+                <button class="secondary" ${state.page <= 1 ? "disabled" : ""} onclick="changePage(-1)">Prev</button>
+                <button class="secondary" ${state.page >= totalPages ? "disabled" : ""} onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    `;
+}
+
+function changePage(step) {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    const next = state.page + step;
+    if (next < 1 || next > totalPages) return;
+    state.page = next;
+    load();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     load();
     document.getElementById("q").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") load();
+        if (e.key === "Enter") {
+            state.page = 1;
+            load();
+        }
     });
 });
 </script>
+
+<div id="pager"></div>
 
 {% endblock %}
 

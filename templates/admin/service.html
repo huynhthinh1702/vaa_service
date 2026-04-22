@@ -51,6 +51,7 @@
 const API = "http://127.0.0.1:5000";
 
 let currentId = null;
+let state = { page: 1, pageSize: 10, total: 0 };
 
 function addService() {
 
@@ -124,16 +125,24 @@ function addService() {
 }
 
 function loadServices() {
-    fetch(API + "/service/list")
+    const cat = (document.getElementById("categoryFilter").value || "").trim();
+    const q = (document.getElementById("search").value || "").trim();
+    const params = new URLSearchParams({
+        page: String(state.page),
+        page_size: String(state.pageSize)
+    });
+    if (cat) params.set("category", cat);
+    if (q) params.set("q", q);
+    fetch(API + "/service/list?" + params.toString())
     .then(res => res.json())
     .then(data => {
         const list = document.getElementById("list");
         list.innerHTML = "";
-        const cat = (document.getElementById("categoryFilter").value || "").trim();
-
-        data
-        .filter(s => !cat || String(s.category || "").trim() === cat)
-        .forEach(s => {
+        const items = data.items || [];
+        state.total = Number(data.total || 0);
+        state.page = Number(data.page || state.page);
+        state.pageSize = Number(data.page_size || state.pageSize);
+        items.forEach(s => {
             const tr = document.createElement("tr");
 
             tr.innerHTML = `
@@ -149,7 +158,29 @@ function loadServices() {
 
             list.appendChild(tr);
         });
+        renderPager();
     });
+}
+
+function renderPager() {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    document.getElementById("pager").innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:10px;">
+            <span>Trang ${state.page}/${totalPages} - ${state.total} dịch vụ</span>
+            <div style="display:flex; gap:8px;">
+                <button class="secondary" ${state.page <= 1 ? "disabled" : ""} onclick="changePage(-1)">Prev</button>
+                <button class="secondary" ${state.page >= totalPages ? "disabled" : ""} onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    `;
+}
+
+function changePage(step) {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    const next = state.page + step;
+    if (next < 1 || next > totalPages) return;
+    state.page = next;
+    loadServices();
 }
 
 function editService(s) {
@@ -179,38 +210,12 @@ function deleteService(id) {
 }
 
 function searchService() {
-    const keyword = document.getElementById("search").value.toLowerCase();
-
-    fetch(API + "/service/list")
-    .then(res => res.json())
-    .then(data => {
-
-        const list = document.getElementById("list");
-        list.innerHTML = "";
-
-        data
-        .filter(s => s.name.toLowerCase().includes(keyword))
-        .forEach(s => {
-
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>${s.id}</td>
-                <td>${s.name}</td>
-                <td>${s.category}</td>
-                <td>${s.price}</td>
-                <td>
-                    <button onclick='editService(${JSON.stringify(s)})'>Sửa</button>
-                    <button onclick="deleteService(${s.id})">Xoá</button>
-                </td>
-            `;
-
-            list.appendChild(tr);
-        });
-
-    });
+    state.page = 1;
+    loadServices();
 }
 
 </script>
+
+<div id="pager"></div>
 
 {% endblock %}

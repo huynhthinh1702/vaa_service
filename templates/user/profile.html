@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tài khoản — VAA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        * { box-sizing: border-box; }
+        body.profile-page {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            background: #eef1f7;
+            color: #1d2746;
+            min-height: 100vh;
+        }
+        .pf-shell {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 22px;
+            align-items: start;
+        }
+        .pf-sidebar {
+            background: #fff;
+            border: 1px solid #dce3f7;
+            border-radius: 14px;
+            overflow: hidden;
+            position: sticky;
+            top: 16px;
+        }
+        .pf-side-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            text-align: left;
+            background: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1d2746;
+            border-bottom: 1px solid #edf1fa;
+            transition: background 0.15s;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+        .pf-side-item:hover { background: #f7f9ff; }
+        .pf-side-item.active { background: #e8eefc; color: #0b2c6b; }
+        .pf-side-item svg { flex-shrink: 0; opacity: 0.85; }
+        .pf-side-item.danger { color: #b42318; }
+        .pf-side-item.danger svg { stroke: #b42318; }
+        .pf-main {
+            background: #fff;
+            border: 1px solid #dce3f7;
+            border-radius: 14px;
+            padding: 28px 26px 32px;
+            min-height: 520px;
+        }
+        .pf-panel { display: none; }
+        .pf-panel.active { display: block; }
+        .pf-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0 0 20px;
+            color: #0b1533;
+        }
+        .pf-banner {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #f0f3fa;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+        }
+        .pf-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2e55c7, #0b2c6b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .pf-banner-name { font-weight: 700; color: #0b2c6b; font-size: 17px; }
+        .pf-banner-user { font-size: 13px; color: #5a678f; margin-top: 2px; }
+        .pf-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0b2c6b;
+            margin: 0 0 16px;
+        }
+        .pf-grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 20px;
+        }
+        .pf-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #2f395a;
+        }
+        .pf-field label .req { color: #c41e3a; }
+        .pf-field input {
+            width: 100%;
+            border: 1px solid #c9d4f2;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 14px;
+            background: #fafbff;
+        }
+        .pf-field input:focus {
+            outline: none;
+            border-color: #2e55c7;
+            background: #fff;
+        }
+        .pf-gender {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 4px;
+        }
+        .pf-gender label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 0;
+        }
+        .pf-gender input { width: auto; accent-color: #2148bf; }
+        .pf-save {
+            margin-top: 22px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 999px;
+            background: #0b2c6b;
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .pf-save:hover { background: #143a8a; }
+        .pf-msg { margin-top: 12px; font-size: 14px; }
+        .pf-msg.ok { color: #0d6b4f; }
+        .pf-msg.err { color: #b42318; }
+        .pw-field { margin-bottom: 18px; position: relative; }
+        .pw-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .pw-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .pw-wrap input {
+            flex: 1;
+            border: 1px solid #c9d4f2;
+            border-radius: 12px;
+            padding: 12px 44px 12px 14px;
+            font-size: 14px;
+            background: #f5f6fa;
+        }
+        .pw-toggle {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            color: #2148bf;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pw-confirm {
+            margin-top: 8px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 999px;
+            background: #0b2c6b;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pf-hint { font-size: 13px; color: #5a678f; margin-top: 8px; line-height: 1.5; }
+        @media (max-width: 860px) {
+            .pf-shell { grid-template-columns: 1fr; }
+            .pf-sidebar { position: static; }
+            .pf-grid2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="profile-page">
+<div class="header-shell">
+    <header class="header">
+        <div class="logo">VAA</div>
+        <nav>
+            <a href="/user">Trang chủ</a>
+            <a href="/profile">Tài khoản</a>
+        </nav>
+    </header>
+</div>
+
+<div class="pf-shell">
+    <aside class="pf-sidebar">
+        <button type="button" class="pf-side-item active" data-panel="account" id="navAccount">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2148bf" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+            Tài khoản
+        </button>
+        <a href="/history" class="pf-side-item" style="text-decoration:none;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2148bf" stroke-width="1.6"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+            Lịch sử đặt hàng
+        </a>
+        <button type="button" class="pf-side-item" data-panel="password" id="navPassword">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2148bf" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            Đổi mật khẩu
+        </button>
+        <button type="button" class="pf-side-item danger" id="navLogout">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 17H5V7h5"/><path d="M14 17l4-5-4-5"/><path d="M18 12H9"/></svg>
+            Đăng xuất
+        </button>
+    </aside>
+
+    <main class="pf-main">
+        <div class="pf-panel active" id="panelAccount">
+            <h1 class="pf-title">Tài khoản</h1>
+            <div class="pf-banner">
+                <div class="pf-avatar" id="pfAvatar">?</div>
+                <div>
+                    <div class="pf-banner-name" id="pfDisplayName">—</div>
+                    <div class="pf-banner-user" id="pfDisplayUser">—</div>
+                </div>
+            </div>
+            <h2 class="pf-section-title">Thông tin cơ bản</h2>
+            <div class="pf-grid2">
+                <div class="pf-field">
+                    <label>Họ và tên <span class="req">*</span></label>
+                    <input id="pfFullname" type="text" autocomplete="name" placeholder="Họ và tên">
+                </div>
+                <div class="pf-field">
+                    <label>Email</label>
+                    <input id="pfEmail" type="email" autocomplete="email" placeholder="Email">
+                </div>
+                <div class="pf-field">
+                    <label>Ngày sinh</label>
+                    <input id="pfDob" type="date">
+                </div>
+                <div class="pf-field" style="grid-column: 1 / -1;">
+                    <label>Giới tính</label>
+                    <div class="pf-gender">
+                        <label><input type="radio" name="gender" value="male"> Nam</label>
+                        <label><input type="radio" name="gender" value="female"> Nữ</label>
+                        <label><input type="radio" name="gender" value="other"> Khác</label>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="pf-save" id="pfSaveBtn">Lưu hồ sơ</button>
+            <div class="pf-msg" id="pfProfileMsg" style="display:none;"></div>
+        </div>
+
+        <div class="pf-panel" id="panelPassword">
+            <h1 class="pf-title">Thay đổi mật khẩu</h1>
+            <p class="pf-hint">Nhập mật khẩu hiện tại để xác nhận. Mật khẩu mới tối thiểu 6 ký tự.</p>
+            <div style="max-width:420px;margin-top:20px;">
+                <div class="pw-field">
+                    <label>Mật khẩu hiện tại <span class="req">*</span></label>
+                    <div class="pw-wrap">
+                        <input type="password" id="pwOld" placeholder="Nhập mật khẩu hiện tại" autocomplete="current-password">
+                        <button type="button" class="pw-toggle" data-target="pwOld" aria-label="Hiện mật khẩu">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pw-field">
+                    <label>Mật khẩu mới <span class="req">*</span></label>
+                    <div class="pw-wrap">
+                        <input type="password" id="pwNew" placeholder="Nhập mật khẩu mới" autocomplete="new-password">
+                        <button type="button" class="pw-toggle" data-target="pwNew" aria-label="Hiện mật khẩu">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pw-field">
+                    <label>Nhập lại mật khẩu mới <span class="req">*</span></label>
+                    <div class="pw-wrap">
+                        <input type="password" id="pwConfirm" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password">
+                        <button type="button" class="pw-toggle" data-target="pwConfirm" aria-label="Hiện mật khẩu">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="pw-confirm" id="pwSubmit">Xác nhận</button>
+                <div class="pf-msg" id="pwMsg" style="display:none;"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+function showMsg(el, text, ok) {
+    el.style.display = "block";
+    el.textContent = text;
+    el.className = "pf-msg " + (ok ? "ok" : "err");
+}
+
+function initials(name, username) {
+    const n = (name || "").trim();
+    if (n.length >= 2) return n.slice(0, 2).toUpperCase();
+    const u = (username || "").trim();
+    if (u.length >= 2) return u.slice(0, 2).toUpperCase();
+    return "?";
+}
+
+function setPanel(name) {
+    const panelId = "panel" + name.charAt(0).toUpperCase() + name.slice(1);
+    document.querySelectorAll(".pf-panel").forEach(p => p.classList.toggle("active", p.id === panelId));
+    document.querySelectorAll(".pf-side-item[data-panel]").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-panel") === name);
+    });
+}
+
+document.querySelectorAll(".pf-side-item[data-panel]").forEach(btn => {
+    btn.addEventListener("click", () => setPanel(btn.getAttribute("data-panel")));
+});
+
+document.querySelectorAll(".pw-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-target");
+        const inp = document.getElementById(id);
+        if (!inp) return;
+        inp.type = inp.type === "password" ? "text" : "password";
+    });
+});
+
+document.getElementById("navLogout").addEventListener("click", () => {
+    fetch("/auth/logout").then(r => r.json()).then(d => {
+        alert(d.message || "Đã đăng xuất");
+        window.location.href = "/user";
+    });
+});
+
+document.getElementById("pfSaveBtn").addEventListener("click", () => {
+    const msg = document.getElementById("pfProfileMsg");
+    const fullname = document.getElementById("pfFullname").value.trim();
+    if (!fullname) {
+        showMsg(msg, "Vui lòng nhập họ và tên.", false);
+        return;
+    }
+    const email = document.getElementById("pfEmail").value.trim();
+    const dob = document.getElementById("pfDob").value.trim();
+    const g = document.querySelector('input[name="gender"]:checked');
+    const gender = g ? g.value : "";
+
+    fetch("/auth/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullname, email, dob, gender })
+    })
+    .then(r => r.json().then(j => ({ ok: r.ok, j })))
+    .then(({ ok, j }) => {
+        showMsg(msg, j.message || (ok ? "Đã lưu." : "Lỗi"), ok);
+        if (ok) {
+            document.getElementById("pfDisplayName").textContent = fullname;
+        }
+    })
+    .catch(() => showMsg(msg, "Không thể kết nối máy chủ.", false));
+});
+
+document.getElementById("pwSubmit").addEventListener("click", () => {
+    const msg = document.getElementById("pwMsg");
+    const old_password = document.getElementById("pwOld").value;
+    const new_password = document.getElementById("pwNew").value.trim();
+    const confirm_password = document.getElementById("pwConfirm").value.trim();
+    fetch("/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old_password, new_password, confirm_password })
+    })
+    .then(r => r.json().then(j => ({ ok: r.ok, j })))
+    .then(({ ok, j }) => {
+        showMsg(msg, j.message || "", ok);
+        if (ok) {
+            document.getElementById("pwOld").value = "";
+            document.getElementById("pwNew").value = "";
+            document.getElementById("pwConfirm").value = "";
+        }
+    })
+    .catch(() => showMsg(msg, "Không thể kết nối máy chủ.", false));
+});
+
+fetch("/auth/me")
+    .then(r => r.json())
+    .then(data => {
+        if (!data.user) {
+            alert("Vui lòng đăng nhập.");
+            window.location.href = "/login";
+            return;
+        }
+        document.getElementById("pfDisplayUser").textContent = data.user;
+        const fn = (data.fullname || "").trim() || data.user;
+        document.getElementById("pfDisplayName").textContent = fn;
+        document.getElementById("pfAvatar").textContent = initials(data.fullname, data.user);
+        document.getElementById("pfFullname").value = (data.fullname || "").trim();
+        document.getElementById("pfEmail").value = (data.email || "").trim();
+        let dob = (data.dob || "").trim();
+        if (dob && dob.includes("/")) {
+            const p = dob.split("/");
+            if (p.length === 3) dob = p[2] + "-" + p[0].padStart(2,"0") + "-" + p[1].padStart(2,"0");
+        }
+        document.getElementById("pfDob").value = dob;
+        const g = (data.gender || "").toLowerCase();
+        if (g === "male" || g === "female" || g === "other") {
+            const radio = document.querySelector('input[name="gender"][value="' + g + '"]');
+            if (radio) radio.checked = true;
+        }
+    });
+</script>
+</body>
+</html>

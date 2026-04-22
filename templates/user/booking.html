@@ -114,10 +114,12 @@
     </style>
 </head>
 <body>
-<header class="header">
-    <div class="logo">VAA</div>
-    <nav><a href="/user">Trang chủ</a> <a href="/history">Lịch sử</a></nav>
-</header>
+<div class="header-shell">
+    <header class="header">
+        <div class="logo">VAA</div>
+        <nav><a href="/user">Trang chủ</a> <a href="/profile">Tài khoản</a></nav>
+    </header>
+</div>
 
 <div class="booking-layout">
     <section>
@@ -375,7 +377,8 @@ function loadService() {
     fetch(API + "/service/list")
         .then(res => res.json())
         .then(data => {
-            const s = data.find(x => String(x.id) === String(id));
+            const items = Array.isArray(data) ? data : (data.items || []);
+            const s = items.find(x => String(x.id) === String(id));
             if (!s) {
                 alert("Không tìm thấy dịch vụ.");
                 window.location.href = "/user";

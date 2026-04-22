@@ -4,6 +4,7 @@
     <title>Đăng nhập</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         * { box-sizing: border-box; }
         body {
@@ -11,25 +12,6 @@
             font-family: Arial, sans-serif;
             background: #f2f5fc;
             color: #1f2a4d;
-        }
-        .top-header {
-            background: #172f91;
-            color: #fff;
-            padding: 14px 26px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 0.4px;
-        }
-        .top-nav a {
-            color: #fff;
-            margin-left: 18px;
-            text-decoration: none;
-            font-size: 14px;
         }
         .auth-page {
             min-height: calc(100vh - 56px);
@@ -158,6 +140,16 @@
             font-size: 14px;
             text-align: center;
         }
+        .auth-notice {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: 1px solid #f5c2c7;
+            background: #f8d7da;
+            color: #842029;
+        }
         @media (max-width: 840px) {
             .auth-card { grid-template-columns: 1fr; }
             .auth-visual { display: none; }
@@ -166,13 +158,15 @@
 </head>
 
 <body>
-<header class="top-header">
-    <div class="logo">VAA</div>
-    <nav class="top-nav">
-        <a href="/user">Trang chủ</a>
-        <a href="/register">Đăng ký</a>
-    </nav>
-</header>
+<div class="header-shell">
+    <header class="header">
+        <div class="logo">VAA</div>
+        <nav>
+            <a href="/user">Trang chủ</a>
+            <a href="/register">Đăng ký</a>
+        </nav>
+    </header>
+</div>
 
 <div class="auth-page">
     <div class="auth-card">
@@ -212,6 +206,7 @@
             </p>
 
             <div id="popup" class="popup"></div>
+            <div id="inactiveNotice" class="auth-notice"></div>
         </div>
     </div>
 </div>
@@ -256,6 +251,7 @@ function login() {
     })
     .then(res => res.json())
     .then(data => {
+        document.getElementById("inactiveNotice").style.display = "none";
 
         if (data.message === "Login success") {
             showPopup("Đăng nhập thành công!", "#2ecc71");
@@ -269,7 +265,9 @@ function login() {
             }, 1000);
 
         } else if (data.message === "Account inactive") {
-            showPopup("Tài khoản đang bị vô hiệu hoá!");
+            const box = document.getElementById("inactiveNotice");
+            box.innerText = "Tài khoản của bạn tạm thời bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.";
+            box.style.display = "block";
         } else {
             showPopup("Sai tài khoản!");
         }
